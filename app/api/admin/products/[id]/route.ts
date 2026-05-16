@@ -3,22 +3,13 @@ import { verifyAdminSession } from '@/lib/adminAuth';
 import { updateProduct, deleteProduct } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
-/**
- * PUT /api/admin/products/[id]
- * Update a product (admin only)
- */
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const isAdmin = await verifyAdminSession();
+
     if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -28,8 +19,10 @@ export async function PUT(
 
     const { id } = await context.params;
     const body = await request.json();
-    const updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>> =
-      body;
+
+    const updates: Partial<
+      Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
+    > = body;
 
     const updated = await updateProduct(id, updates);
 
@@ -46,6 +39,7 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating product:', error);
+
     return NextResponse.json(
       { success: false, error: 'Failed to update product' },
       { status: 500 }
@@ -53,16 +47,13 @@ export async function PUT(
   }
 }
 
-/**
- * DELETE /api/admin/products/[id]
- * Soft delete a product (admin only)
- */
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const isAdmin = await verifyAdminSession();
+
     if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -86,6 +77,7 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting product:', error);
+
     return NextResponse.json(
       { success: false, error: 'Failed to delete product' },
       { status: 500 }
