@@ -1,0 +1,17 @@
+
+> chto-podarit@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.12:3000
+✓ Ready in 1415ms
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3001
+- PID:          17800
+- Dir:          /Users/duglas/chto-podarit
+- Log:          .next/dev/logs/next-development.log
+
+Run kill 17800 to stop it.
+[?25h

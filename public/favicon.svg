@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="fgrad" x1="0" x2="1">
+      <stop offset="0%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="18" fill="url(#fgrad)"/>
+  <text x="50%" y="62%" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="40" fill="#fff">ЧП</text>
+</svg>
