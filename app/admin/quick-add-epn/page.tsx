@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminShell from '@/components/admin/AdminShell';
+import SafeProductImage from '@/components/SafeProductImage';
 import { MARKETPLACE_OPTIONS } from '@/lib/marketplaces';
 import type { Product } from '@/types/product';
 
@@ -251,11 +252,12 @@ export default function AdminQuickAddEpnPage() {
             <h2 className="text-xl font-semibold">Предварительный просмотр</h2>
             <div className="mt-5 grid gap-4 lg:grid-cols-[200px_1fr]">
               <div className="rounded-3xl overflow-hidden bg-slate-950/80">
-                {preview.imageUrl ? (
-                  <img src={preview.imageUrl} alt={preview.title || 'preview'} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-56 items-center justify-center bg-slate-900 text-white/40">Нет картинки</div>
-                )}
+                <SafeProductImage
+                  imageUrl={preview.imageUrl}
+                  alt={preview.title || 'preview'}
+                  wrapperClassName="h-56 w-full"
+                  className="h-full w-full object-cover"
+                />
               </div>
               <div className="space-y-3 text-sm text-white/70">
                 <div>

@@ -52,9 +52,8 @@ export default function Footer() {
           {/* Copyright */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 leading-6">© {currentYear} ЧтоПодарить. Быстрый подбор подарков для всех случаев жизни.</p>
-            <div className="flex flex-col gap-1 text-xs text-slate-600 sm:text-right">
-              <span>Сделано с любовью ❤️</span>
-              <span className="text-slate-400">ePN</span>
+            <div className="text-xs text-slate-600 sm:text-right">
+              Сделано с любовью ❤️
             </div>
           </div>
         </div>

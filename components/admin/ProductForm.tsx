@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Product } from '@/types/product';
+import SafeProductImage from '@/components/SafeProductImage';
 import { MARKETPLACE_OPTIONS } from '@/lib/marketplaces';
 
 interface ProductFormProps {
@@ -61,6 +62,15 @@ export default function ProductForm({
 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [imageStatus, setImageStatus] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [checkingImage, setCheckingImage] = useState(false);
+  const [fetchingImage, setFetchingImage] = useState(false);
+
+  useEffect(() => {
+    setImageStatus('');
+  }, [formData.imageUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +90,104 @@ export default function ProductForm({
   function handleArrayInput(field: string, value: string) {
     const values = value.split(',').map((v) => v.trim()).filter(Boolean);
     setFormData((prev) => ({ ...prev, [field]: values }));
+  }
+
+  function handleImageFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
+    setImageStatus('');
+  }
+
+  function clearImage() {
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
+    setSelectedFile(null);
+    setImageStatus('');
+  }
+
+  async function validateImageUrl() {
+    if (!formData.imageUrl) {
+      setImageStatus('Укажите URL изображения.');
+      return;
+    }
+
+    setCheckingImage(true);
+    setImageStatus('Проверка изображения...');
+
+    const img = new Image();
+    img.onload = () => {
+      setImageStatus('Изображение доступно.');
+      setCheckingImage(false);
+    };
+    img.onerror = () => {
+      setImageStatus('Изображение не загружается.');
+      setCheckingImage(false);
+    };
+    img.src = formData.imageUrl;
+  }
+
+  async function uploadSelectedImage() {
+    if (!selectedFile) {
+      setImageStatus('Выберите файл для загрузки.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setImageStatus('Загрузка изображения...');
+    const payload = new FormData();
+    payload.append('file', selectedFile);
+
+    try {
+      const response = await fetch('/api/admin/products/upload-image', {
+        method: 'POST',
+        body: payload,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setImageStatus(data.error || 'Не удалось загрузить изображение.');
+        return;
+      }
+      setFormData((prev) => ({ ...prev, imageUrl: data.imageUrl }));
+      setSelectedFile(null);
+      setImageStatus('Изображение загружено. URL установлен.');
+    } catch (error) {
+      console.error(error);
+      setImageStatus('Ошибка при загрузке изображения.');
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function fetchImageByLink() {
+    const url = formData.affiliateUrl?.trim() || formData.originalUrl?.trim();
+    if (!url) {
+      setImageStatus('Укажите оригинальную или партнёрскую ссылку.');
+      return;
+    }
+
+    setFetchingImage(true);
+    setImageStatus('Попытка получить картинку по ссылке...');
+
+    try {
+      const response = await fetch('/api/admin/products/fetch-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setImageStatus(data.error || 'Картинку не удалось получить автоматически.');
+        return;
+      }
+
+      setFormData((prev) => ({ ...prev, imageUrl: data.imageUrl }));
+      setImageStatus('Картинка найдена и установлена.');
+    } catch (error) {
+      console.error(error);
+      setImageStatus('Ошибка при получении картинки.');
+    } finally {
+      setFetchingImage(false);
+    }
   }
 
   return (
@@ -174,6 +282,80 @@ export default function ProductForm({
               <p className="text-sm text-white/50">
                 💡 Если указан партнёрский URL, он будет использован вместо основной ссылки
               </p>
+            </div>
+          </div>
+
+          {/* Image */}
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Изображение товара</h2>
+            <div className="grid gap-6 lg:grid-cols-[240px_1fr] items-start">
+              <div className="rounded-[1.75rem] overflow-hidden border border-white/10 bg-slate-900">
+                <SafeProductImage
+                  imageUrl={formData.imageUrl}
+                  alt={formData.title || 'Изображение товара'}
+                  wrapperClassName="h-64 w-full"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="url"
+                  placeholder="URL изображения"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
+                />
+                <div className="grid gap-3 md:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={validateImageUrl}
+                    disabled={checkingImage}
+                    className="rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition disabled:opacity-50"
+                  >
+                    {checkingImage ? 'Проверка...' : 'Проверить изображение'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    className="rounded-2xl border border-white/10 bg-slate-800 px-4 py-3 text-sm font-semibold text-white hover:border-white/20 transition"
+                  >
+                    Очистить изображение
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fetchImageByLink}
+                    disabled={fetchingImage}
+                    className="rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white hover:brightness-110 transition disabled:opacity-50"
+                  >
+                    {fetchingImage ? 'Идёт поиск...' : 'Попробовать подтянуть картинку по ссылке'}
+                  </button>
+                </div>
+                <label className="block text-sm text-white/70">
+                  Загрузить файл
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageFileChange}
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white file:mr-4 file:rounded-full file:border-0 file:bg-purple-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  />
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={uploadSelectedImage}
+                    disabled={!selectedFile || uploadingImage}
+                    className="rounded-2xl bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-4 py-3 text-sm font-semibold text-white hover:brightness-110 transition disabled:opacity-50"
+                  >
+                    {uploadingImage ? 'Загрузка...' : 'Загрузить файл'}
+                  </button>
+                  {selectedFile ? (
+                    <div className="rounded-2xl border border-white/10 bg-slate-800 px-4 py-3 text-sm text-slate-300">{selectedFile.name}</div>
+                  ) : null}
+                </div>
+                {imageStatus ? (
+                  <p className="text-sm text-slate-300">{imageStatus}</p>
+                ) : null}
+              </div>
             </div>
           </div>
 

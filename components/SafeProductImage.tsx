@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface SafeProductImageProps {
   imageUrl?: string | null;
@@ -16,6 +16,10 @@ export default function SafeProductImage({
 }: SafeProductImageProps) {
   const [hasError, setHasError] = useState(false);
   const showImage = Boolean(imageUrl) && !hasError;
+
+  useEffect(() => {
+    setHasError(false);
+  }, [imageUrl]);
 
   return (
     <div className={wrapperClassName}>

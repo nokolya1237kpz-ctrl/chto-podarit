@@ -32,10 +32,10 @@ export default async function Home() {
                   Быстро. Персонально. Премиально.
                 </div>
                 <div className="space-y-4">
-                  <h1 className="hero-title-3d">
-                    <span className="text-white">Найдём</span>{' '}
-                    <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">идеальный подарок</span>{' '}
-                    <span className="text-white drop-shadow-[0_0_16px_rgba(255,255,255,0.18)]">за 30 секунд</span>
+                  <h1 className="hero-title-3d max-w-3xl text-[clamp(3.5rem,6vw,5.5rem)] leading-[0.95] sm:text-[clamp(4rem,6vw,6rem)]">
+                    <div className="text-white">Найдём</div>
+                    <div className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">идеальный подарок</div>
+                    <div className="text-white drop-shadow-[0_0_22px_rgba(255,255,255,0.18)]">за 30 секунд</div>
                   </h1>
                   <p className="text-lg leading-8 text-slate-300 max-w-2xl font-light">Ответьте на 5 вопросов и получите 10 персональных идей с ценами, вау‑рейтингом и ссылками на товары.</p>
                 </div>
