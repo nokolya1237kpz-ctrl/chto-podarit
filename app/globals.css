@@ -216,6 +216,52 @@ body::before {
 .btn-primary { transition: transform .18s ease, box-shadow .18s ease; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 60px rgba(124,58,237,0.24); }
 
+/* VK Mini App specific overrides (scoped under .vk-root) */
+.vk-root {
+  max-width: 480px;
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 15% 10%, rgba(124,58,237,0.28), transparent 30%), radial-gradient(circle at 85% 90%, rgba(236,72,153,0.18), transparent 35%), linear-gradient(180deg, #070a12, #0b1020);
+  color: var(--text-strong);
+}
+
+/* Ensure no horizontal scroll inside VK shell */
+.vk-root, .vk-root body, .vk-root html {
+  overflow-x: hidden;
+}
+
+/* Safe area padding for iPhones */
+.vk-root { padding-top: calc(env(safe-area-inset-top) + 16px); padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
+
+.vk-shell-card {
+  background: rgba(15,18,35,0.72);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 24px 80px rgba(7,12,23,0.45);
+}
+
+.vk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0 16px 0;
+}
+.vk-logo { display:flex; align-items:center; gap:8px; }
+.vk-title { font-weight:800; font-size:1rem; color:var(--text-strong); }
+.vk-start-btn { background: linear-gradient(135deg, var(--accent-from), var(--accent-to)); color:white; padding:8px 12px; border-radius:999px; font-weight:700; }
+
+.vk-quiz-card { width:100%; }
+.vk-quiz-option { border-radius:12px; padding:12px; text-align:left; }
+.vk-quiz-option.active { box-shadow: 0 20px 80px rgba(124,58,237,0.28); background: linear-gradient(90deg,#7c3aed22,#ec489922); border:1px solid rgba(255,255,255,0.08); }
+
+.vk-result-card { border-radius:12px; overflow:hidden; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); }
+
+
 button:focus, a:focus { outline: 3px solid rgba(124,58,237,0.18); outline-offset: 4px; }
 
 .fade-in { animation: fadeIn 0.6s ease both; }

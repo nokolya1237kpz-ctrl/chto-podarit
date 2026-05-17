@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Product } from '@/types/product';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { createProduct } from '@/lib/supabase';
 import { fetchEpnProductMetadata } from '@/lib/epn';
@@ -59,7 +60,15 @@ export async function POST(request: NextRequest) {
     }
 
     const createAsDraft = !metadata;
-    const productStatus = createAsDraft ? 'draft' : (body.status === 'active' || body.status === 'draft' ? body.status : 'draft');
+    const isCompleteProduct = Boolean(
+      (body.title || metadata?.title) &&
+      (body.price ?? metadata?.price) > 0 &&
+      (body.imageUrl || metadata?.imageUrl) &&
+      (body.affiliateUrl || affiliateUrl)
+    );
+
+    const productStatus: Product['status'] = body.status === 'draft' ? 'draft' : isCompleteProduct ? 'active' : 'draft';
+    const isActive = body.isActive ?? isCompleteProduct;
 
     const product = {
       title: body.title || metadata?.title || 'Новый товар ePN',
@@ -85,14 +94,10 @@ export async function POST(request: NextRequest) {
       riskLevel: body.riskLevel || 'low',
       isBestPrice: body.isBestPrice ?? false,
       discountPercent: body.discountPercent ?? null,
-      isActive: createAsDraft ? false : true,
+      isActive,
       status: productStatus,
-      lastSyncedAt: createAsDraft ? undefined : new Date().toISOString(),
+      lastSyncedAt: isCompleteProduct ? new Date().toISOString() : undefined,
     };
-
-    if (!createAsDraft && product.title && product.price > 0 && product.imageUrl) {
-      product.status = 'active';
-    }
 
     const saved = await createProduct(product);
     if (!saved) {

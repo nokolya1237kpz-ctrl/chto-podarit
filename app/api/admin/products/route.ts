@@ -76,7 +76,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = body;
+    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+      ...body,
+      status: body.status ?? 'active',
+      isActive: body.isActive ?? true,
+    };
 
     const created = await createProduct(product);
 

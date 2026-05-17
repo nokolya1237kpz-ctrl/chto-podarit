@@ -30,6 +30,8 @@ export default function ProductForm({
   title,
 }: ProductFormProps) {
   const router = useRouter();
+  const isCreating = !productId;
+
   const [formData, setFormData] = useState<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>({
     title: initialProduct?.title || '',
     description: initialProduct?.description || '',
@@ -54,8 +56,8 @@ export default function ProductForm({
     tags: initialProduct?.tags || [],
     isBestPrice: initialProduct?.isBestPrice || false,
     discountPercent: initialProduct?.discountPercent,
-    isActive: initialProduct?.isActive !== false,
-    status: initialProduct?.status || 'draft',
+    isActive: initialProduct?.isActive ?? (isCreating ? true : false),
+    status: initialProduct?.status ?? (isCreating ? 'active' : 'draft'),
     sourceProvider: initialProduct?.sourceProvider || 'manual',
     sourceType: initialProduct?.sourceType || 'manual',
   });
@@ -78,7 +80,20 @@ export default function ProductForm({
     setSubmitting(true);
 
     try {
-      await onSubmit(formData);
+      const isComplete = Boolean(
+        formData.title &&
+        formData.price > 0 &&
+        formData.imageUrl &&
+        (formData.affiliateUrl || formData.originalUrl)
+      );
+
+      const payload = {
+        ...formData,
+        status: isComplete ? (formData.status || 'active') : 'draft',
+        isActive: isComplete ? formData.isActive : false,
+      };
+
+      await onSubmit(payload);
       router.push('/admin/products');
     } catch (err: any) {
       setError(err.message || 'Failed to save product');
@@ -502,6 +517,49 @@ export default function ProductForm({
           <div>
             <h2 className="text-2xl font-semibold mb-4">Статус</h2>
             <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block rounded-2xl border border-white/10 bg-slate-800 p-4">
+                  <span className="text-sm text-white/70">Публикация</span>
+                  <div className="mt-3 flex items-center gap-3">
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="active"
+                        checked={formData.status === 'active'}
+                        onChange={() => setFormData({ ...formData, status: 'active' })}
+                        className="w-4 h-4"
+                      />
+                      <span>Опубликован</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="draft"
+                        checked={formData.status === 'draft'}
+                        onChange={() => setFormData({ ...formData, status: 'draft' })}
+                        className="w-4 h-4"
+                      />
+                      <span>Черновик</span>
+                    </label>
+                  </div>
+                </label>
+                <label className="block rounded-2xl border border-white/10 bg-slate-800 p-4">
+                  <span className="text-sm text-white/70">Видимость</span>
+                  <div className="mt-3 flex items-center gap-3">
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                        className="w-5 h-5"
+                      />
+                      <span>Активен</span>
+                    </label>
+                  </div>
+                </label>
+              </div>
               <label className="flex items-center space-x-3">
                 <input
                   type="checkbox"
@@ -510,15 +568,6 @@ export default function ProductForm({
                   className="w-5 h-5"
                 />
                 <span>Лучшее предложение</span>
-              </label>
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-5 h-5"
-                />
-                <span>Активен</span>
               </label>
             </div>
           </div>

@@ -15,11 +15,12 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState('');
   const [marketplace, setMarketplace] = useState('');
   const [sourceType, setSourceType] = useState('');
-  const [isActive, setIsActive] = useState<string>('true');
+  const [status, setStatus] = useState('');
+  const [isActive, setIsActive] = useState('');
 
   useEffect(() => {
     fetchProducts();
-  }, [search, marketplace, sourceType, isActive]);
+  }, [search, marketplace, sourceType, status, isActive]);
 
   async function fetchProducts() {
     try {
@@ -28,6 +29,7 @@ export default function AdminProductsPage() {
       if (search) params.append('query', search);
       if (marketplace) params.append('marketplace', marketplace);
       if (sourceType) params.append('sourceType', sourceType);
+      if (status) params.append('status', status);
       if (isActive) params.append('isActive', isActive);
 
       const res = await fetch(`/api/admin/products?${params}`);
@@ -63,6 +65,31 @@ export default function AdminProductsPage() {
         setProducts(products.filter((p) => p.id !== id));
       } else {
         setError('Не удалось удалить товар');
+      }
+    } catch (err) {
+      setError('Сетевая ошибка');
+      console.error(err);
+    }
+  }
+
+  async function handlePublish(id: string) {
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active', isActive: true }),
+      });
+
+      if (!res.ok) {
+        setError('Не удалось опубликовать товар');
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success && data.data) {
+        setProducts((prev) => prev.map((product) => product.id === id ? data.data : product));
+      } else {
+        setError(data.error || 'Не удалось опубликовать товар');
       }
     } catch (err) {
       setError('Сетевая ошибка');
@@ -134,11 +161,20 @@ export default function AdminProductsPage() {
               <option value="mock">Mock</option>
             </select>
             <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
+            >
+              <option value="">Все статусы</option>
+              <option value="active">Опубликован</option>
+              <option value="draft">Черновик</option>
+            </select>
+            <select
               value={isActive}
               onChange={(e) => setIsActive(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">Все статусы</option>
+              <option value="">Все активности</option>
               <option value="true">Активен</option>
               <option value="false">Неактивен</option>
             </select>
@@ -157,9 +193,9 @@ export default function AdminProductsPage() {
                   <th className="px-6 py-3 text-left text-sm font-semibold">Название</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Цена</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Маркетплейс</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Партнёрская ссылка</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Источник</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Статус</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Активность</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Действия</th>
                 </tr>
               </thead>
@@ -169,10 +205,12 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 text-sm">{product.title}</td>
                     <td className="px-6 py-4 text-sm">{product.price.toLocaleString('ru-RU')} ₽</td>
                     <td className="px-6 py-4 text-sm">{getMarketplaceName(product.marketplace)}</td>
-                    <td className="px-6 py-4 text-sm">
-                      {product.affiliateUrl ? '✓' : '✗'}
-                    </td>
                     <td className="px-6 py-4 text-sm text-purple-300">{product.sourceType}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={product.status === 'active' ? 'text-green-400' : 'text-yellow-300'}>
+                        {product.status === 'active' ? 'Опубликован' : 'Черновик'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={product.isActive ? 'text-green-400' : 'text-gray-400'}>
                         {product.isActive ? 'Активен' : 'Неактивен'}
@@ -185,6 +223,14 @@ export default function AdminProductsPage() {
                       >
                         Редактировать
                       </Link>
+                      {!product.isActive || product.status !== 'active' ? (
+                        <button
+                          onClick={() => handlePublish(product.id)}
+                          className="text-emerald-400 hover:text-emerald-300"
+                        >
+                          Опубликовать
+                        </button>
+                      ) : null}
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="text-red-400 hover:text-red-300"
