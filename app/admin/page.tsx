@@ -24,14 +24,14 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Login failed');
+        setError(data.error || 'Ошибка входа');
         return;
       }
 
       // Redirect to admin products
       router.push('/admin/products');
     } catch (err) {
-      setError('Network error');
+      setError('Сетевая ошибка');
       console.error(err);
     } finally {
       setLoading(false);
@@ -42,13 +42,13 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-gradient-to-b from-white/6 to-white/4 border border-white/10 rounded-2xl p-8 backdrop-blur-xl">
-          <h1 className="text-3xl font-bold mb-2">Admin Panel</h1>
-          <p className="text-white/50 mb-8">Enter password to continue</p>
+          <h1 className="text-3xl font-bold mb-2">Админ-панель</h1>
+          <p className="text-white/50 mb-8">Введите пароль для доступа</p>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="password"
-              placeholder="Admin password"
+              placeholder="Пароль администратора"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
               disabled={loading || !password}
               className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Вход...' : 'Войти'}
             </button>
           </form>
         </div>

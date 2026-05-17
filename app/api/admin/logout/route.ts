@@ -11,12 +11,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Logged out',
+      message: 'Выход выполнен',
     });
   } catch (error) {
     console.error('Error in admin logout:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }

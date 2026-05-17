@@ -94,18 +94,18 @@ export default function ProductForm({
         <form onSubmit={handleSubmit} className="bg-slate-900 border border-white/10 rounded-lg p-8 space-y-8">
           {/* Basic Info */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Basic Information</h2>
+            <h2 className="text-2xl font-semibold mb-4">Основная информация</h2>
             <div className="space-y-4">
               <input
                 type="text"
-                placeholder="Product Title"
+                placeholder="Название товара"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
                 required
               />
               <textarea
-                placeholder="Description"
+                placeholder="Описание"
                 value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30 min-h-20"
@@ -113,7 +113,7 @@ export default function ProductForm({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input
                   type="number"
-                  placeholder="Price"
+                  placeholder="Цена"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                   className="px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white"
@@ -121,7 +121,7 @@ export default function ProductForm({
                 />
                 <input
                   type="number"
-                  placeholder="Old Price (optional)"
+                  placeholder="Старая цена (опционально)"
                   value={formData.oldPrice || ''}
                   onChange={(e) => setFormData({ ...formData, oldPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
                   className="px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white"
@@ -131,7 +131,7 @@ export default function ProductForm({
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                   className="px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white"
                 >
-                  <option value="RUB">RUB</option>
+                  <option value="RUB">₽</option>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                 </select>
@@ -141,7 +141,7 @@ export default function ProductForm({
 
           {/* URLs & Marketplace */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Marketplace & URLs</h2>
+            <h2 className="text-2xl font-semibold mb-4">Маркетплейс и ссылки</h2>
             <div className="space-y-4">
               <select
                 value={formData.marketplace}
@@ -156,7 +156,7 @@ export default function ProductForm({
               </select>
               <input
                 type="url"
-                placeholder="Original URL (required)"
+                placeholder="Ссылка на товар (обязательно)"
                 value={formData.originalUrl}
                 onChange={(e) => setFormData({ ...formData, originalUrl: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
@@ -164,24 +164,24 @@ export default function ProductForm({
               />
               <input
                 type="url"
-                placeholder="Affiliate URL (optional - used instead of original URL)"
+                placeholder="Партнёрская ссылка (опционально)"
                 value={formData.affiliateUrl || ''}
                 onChange={(e) => setFormData({ ...formData, affiliateUrl: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
               />
               <p className="text-sm text-white/50">
-                💡 If affiliateUrl is filled, site will use it instead of originalUrl
+                💡 Если указан партнёрский URL, он будет использован вместо основной ссылки
               </p>
             </div>
           </div>
 
           {/* Admitad */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Admitad Configuration</h2>
+            <h2 className="text-2xl font-semibold mb-4">Настройки Admitad</h2>
             <div className="space-y-4">
               <input
                 type="text"
-                placeholder="Admitad Deeplink (optional)"
+                placeholder="Admitad deeplink (опционально)"
                 value={formData.admitadDeeplink || ''}
                 onChange={(e) => setFormData({ ...formData, admitadDeeplink: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
@@ -189,14 +189,14 @@ export default function ProductForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Campaign ID (optional)"
+                  placeholder="ID кампании (опционально)"
                   value={formData.admitadCampaignId || ''}
                   onChange={(e) => setFormData({ ...formData, admitadCampaignId: e.target.value })}
                   className="px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
                 />
                 <input
                   type="text"
-                  placeholder="Offer ID (optional)"
+                  placeholder="ID оффера (опционально)"
                   value={formData.admitadOfferId || ''}
                   onChange={(e) => setFormData({ ...formData, admitadOfferId: e.target.value })}
                   className="px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
@@ -207,14 +207,14 @@ export default function ProductForm({
 
           {/* Categorization */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Categorization</h2>
+            <h2 className="text-2xl font-semibold mb-4">Категория</h2>
             <div className="space-y-4">
               <select
                 value={formData.budget}
                 onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white"
               >
-                <option value="">Select Budget</option>
+                <option value="">Выберите бюджет</option>
                 {BUDGET_OPTIONS.map((b) => (
                   <option key={b} value={b}>
                     {b}
@@ -223,7 +223,7 @@ export default function ProductForm({
               </select>
 
               <div>
-                <label className="block text-sm mb-2">Recipients (comma-separated)</label>
+                <label className="block text-sm mb-2">Получатели (через запятую)</label>
                 <textarea
                   placeholder="girlfriend, boyfriend, mom, dad"
                   value={formData.recipients.join(', ')}
@@ -233,7 +233,7 @@ export default function ProductForm({
               </div>
 
               <div>
-                <label className="block text-sm mb-2">Interests (comma-separated)</label>
+                <label className="block text-sm mb-2">Интересы (через запятую)</label>
                 <textarea
                   placeholder="музыка, спорт, книги"
                   value={formData.interests.join(', ')}
@@ -243,7 +243,7 @@ export default function ProductForm({
               </div>
 
               <div>
-                <label className="block text-sm mb-2">Occasions (comma-separated)</label>
+                <label className="block text-sm mb-2">Поводы (через запятую)</label>
                 <textarea
                   placeholder="день рождения, новый год"
                   value={formData.occasions.join(', ')}
@@ -253,7 +253,7 @@ export default function ProductForm({
               </div>
 
               <div>
-                <label className="block text-sm mb-2">Gift Types (comma-separated)</label>
+                <label className="block text-sm mb-2">Типы подарков (через запятую)</label>
                 <textarea
                   placeholder="гаджет, книга, косметика"
                   value={formData.giftTypes.join(', ')}
@@ -266,10 +266,10 @@ export default function ProductForm({
 
           {/* Rating & Assessment */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Rating & Assessment</h2>
+            <h2 className="text-2xl font-semibold mb-4">Оценка</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm mb-2">Wow Rating (1-10)</label>
+                <label className="block text-sm mb-2">Рейтинг WOW (1-10)</label>
                 <select
                   value={formData.wowRating}
                   onChange={(e) => setFormData({ ...formData, wowRating: parseInt(e.target.value) })}
@@ -283,7 +283,7 @@ export default function ProductForm({
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-2">Risk Level</label>
+                <label className="block text-sm mb-2">Уровень риска</label>
                 <select
                   value={formData.riskLevel}
                   onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value as any })}
@@ -297,7 +297,7 @@ export default function ProductForm({
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-2">Discount Percent (optional)</label>
+                <label className="block text-sm mb-2">Скидка (%)</label>
                 <input
                   type="number"
                   placeholder="0"
@@ -316,7 +316,7 @@ export default function ProductForm({
 
           {/* Status */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Status</h2>
+            <h2 className="text-2xl font-semibold mb-4">Статус</h2>
             <div className="space-y-4">
               <label className="flex items-center space-x-3">
                 <input
@@ -325,7 +325,7 @@ export default function ProductForm({
                   onChange={(e) => setFormData({ ...formData, isBestPrice: e.target.checked })}
                   className="w-5 h-5"
                 />
-                <span>Best Price</span>
+                <span>Лучшее предложение</span>
               </label>
               <label className="flex items-center space-x-3">
                 <input
@@ -334,7 +334,7 @@ export default function ProductForm({
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="w-5 h-5"
                 />
-                <span>Active</span>
+                <span>Активен</span>
               </label>
             </div>
           </div>
@@ -346,14 +346,14 @@ export default function ProductForm({
               disabled={submitting || isLoading}
               className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
             >
-              {submitting || isLoading ? 'Saving...' : 'Save Product'}
+              {submitting || isLoading ? 'Сохранение...' : 'Сохранить'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
               className="px-6 py-3 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-700 transition"
             >
-              Cancel
+              Отмена
             </button>
           </div>
         </form>

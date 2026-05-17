@@ -30,6 +30,9 @@ export default function Footer() {
               <div className="flex flex-col gap-2">
                 <Link href="/quiz" className="text-sm text-slate-400 hover:text-slate-200 transition">Подобрать подарок</Link>
                 <Link href="/#how-it-works" className="text-sm text-slate-400 hover:text-slate-200 transition">Как это работает</Link>
+                <Link href="/privacy" className="text-sm text-slate-400 hover:text-slate-200 transition">Политика конфиденциальности</Link>
+                <Link href="/terms" className="text-sm text-slate-400 hover:text-slate-200 transition">Пользовательское соглашение</Link>
+                <Link href="/contacts" className="text-sm text-slate-400 hover:text-slate-200 transition">Контакты</Link>
               </div>
             </div>
 
@@ -38,7 +41,7 @@ export default function Footer() {
               <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Информация</h4>
               <div className="flex flex-col gap-2">
                 <a href="/vk" className="text-sm text-slate-400 hover:text-slate-200 transition">VK Mini App</a>
-                <span className="text-sm text-slate-500">support@chto-podarit.ru</span>
+                <a href="mailto:support@что-подарить.online" className="text-sm text-slate-400 hover:text-slate-200 transition">support@что-подарить.online</a>
               </div>
             </div>
           </div>

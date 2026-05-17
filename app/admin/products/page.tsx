@@ -43,7 +43,7 @@ export default function AdminProductsPage() {
         setError(data.error);
       }
     } catch (err) {
-      setError('Failed to fetch products');
+      setError('Ошибка загрузки товаров');
       console.error(err);
     } finally {
       setLoading(false);
@@ -51,7 +51,7 @@ export default function AdminProductsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm('Вы действительно хотите удалить этот товар?')) return;
 
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
@@ -61,10 +61,10 @@ export default function AdminProductsPage() {
       if (res.ok) {
         setProducts(products.filter((p) => p.id !== id));
       } else {
-        setError('Failed to delete product');
+        setError('Не удалось удалить товар');
       }
     } catch (err) {
-      setError('Network error');
+      setError('Сетевая ошибка');
       console.error(err);
     }
   }
@@ -78,19 +78,19 @@ export default function AdminProductsPage() {
     <div className="min-h-screen bg-slate-950 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">Admin: Products</h1>
+          <h1 className="text-4xl font-bold">Админ: Товары</h1>
           <div className="space-x-4">
             <Link
               href="/admin/products/new"
               className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
             >
-              Add Product
+              Добавить товар
             </Link>
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
             >
-              Logout
+              Выход
             </button>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function AdminProductsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input
               type="text"
-              placeholder="Search by title..."
+              placeholder="Поиск по названию..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
@@ -110,20 +110,20 @@ export default function AdminProductsPage() {
               onChange={(e) => setMarketplace(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">All Marketplaces</option>
+              <option value="">Все маркетплейсы</option>
               <option value="ozon">Ozon</option>
               <option value="wildberries">Wildberries</option>
               <option value="yandex_market">Yandex.Market</option>
               <option value="aliexpress">AliExpress</option>
               <option value="amazon">Amazon</option>
-              <option value="other">Other</option>
+              <option value="other">Другой</option>
             </select>
             <select
               value={sourceType}
               onChange={(e) => setSourceType(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">All Sources</option>
+              <option value="">Все источники</option>
               <option value="manual">Manual</option>
               <option value="admitad">Admitad</option>
               <option value="api">API</option>
@@ -134,9 +134,9 @@ export default function AdminProductsPage() {
               onChange={(e) => setIsActive(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">All Status</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
+              <option value="">Все статусы</option>
+              <option value="true">Активен</option>
+              <option value="false">Неактивен</option>
             </select>
           </div>
         </div>
@@ -144,26 +144,26 @@ export default function AdminProductsPage() {
         {error && <div className="bg-red-500/10 border border-red-500 text-red-400 p-4 rounded-lg mb-8">{error}</div>}
 
         {loading ? (
-          <div className="text-center py-12">Loading...</div>
+          <div className="text-center py-12">Загрузка...</div>
         ) : (
           <div className="bg-slate-900 border border-white/10 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Title</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Price</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Marketplace</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Affiliate URL</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Source</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Название</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Цена</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Маркетплейс</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Партнёрская ссылка</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Источник</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Статус</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">Действия</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {products.map((product) => (
                   <tr key={product.id} className="hover:bg-slate-800/50">
                     <td className="px-6 py-4 text-sm">{product.title}</td>
-                    <td className="px-6 py-4 text-sm">{product.price} ₽</td>
+                    <td className="px-6 py-4 text-sm">{product.price.toLocaleString('ru-RU')} ₽</td>
                     <td className="px-6 py-4 text-sm">{getMarketplaceName(product.marketplace)}</td>
                     <td className="px-6 py-4 text-sm">
                       {product.affiliateUrl ? '✓' : '✗'}
@@ -171,7 +171,7 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 text-sm text-purple-300">{product.sourceType}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={product.isActive ? 'text-green-400' : 'text-gray-400'}>
-                        {product.isActive ? 'Active' : 'Inactive'}
+                        {product.isActive ? 'Активен' : 'Неактивен'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm space-x-2">
@@ -179,13 +179,13 @@ export default function AdminProductsPage() {
                         href={`/admin/products/${product.id}/edit`}
                         className="text-purple-400 hover:text-purple-300"
                       >
-                        Edit
+                        Редактировать
                       </Link>
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="text-red-400 hover:text-red-300"
                       >
-                        Delete
+                        Удалить
                       </button>
                     </td>
                   </tr>
@@ -193,7 +193,7 @@ export default function AdminProductsPage() {
               </tbody>
             </table>
             {products.length === 0 && (
-              <div className="text-center py-8 text-white/50">No products found</div>
+              <div className="text-center py-8 text-white/50">Товары не найдены</div>
             )}
           </div>
         )}

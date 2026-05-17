@@ -38,16 +38,16 @@ export default function EditProductPage() {
 
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error || 'Failed to update product');
+      throw new Error(data.error || 'Ошибка сохранения');
     }
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center">Загрузка...</div>;
   }
 
   if (!product) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center">Product not found</div>;
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center">Товар не найден</div>;
   }
 
   return (
@@ -56,7 +56,7 @@ export default function EditProductPage() {
       initialProduct={product}
       onSubmit={handleSubmit}
       isLoading={loading}
-      title="Edit Product"
+      title="Редактировать товар"
     />
   );
 }

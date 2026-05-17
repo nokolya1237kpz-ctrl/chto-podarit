@@ -13,14 +13,14 @@ export default function NewProductPage() {
 
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error || 'Failed to create product');
+      throw new Error(data.error || 'Ошибка сохранения');
     }
   }
 
   return (
     <ProductForm
       onSubmit={handleSubmit}
-      title="Add New Product"
+      title="Добавить товар"
     />
   );
 }

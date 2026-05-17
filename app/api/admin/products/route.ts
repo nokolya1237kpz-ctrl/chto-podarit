@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const isAdmin = await verifyAdminSession();
     if (!isAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Нет доступа' },
         { status: 401 }
       );
     }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching admin products:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch products' },
+      { success: false, error: 'Ошибка загрузки товаров' },
       { status: 500 }
     );
   }
@@ -61,14 +61,14 @@ export async function POST(request: NextRequest) {
     const isAdmin = await verifyAdminSession();
     if (!isAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Нет доступа' },
         { status: 401 }
       );
     }
 
     if (!supabaseAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Database not configured' },
+        { success: false, error: 'База данных не настроена' },
         { status: 500 }
       );
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     if (!created) {
       return NextResponse.json(
-        { success: false, error: 'Failed to create product' },
+        { success: false, error: 'Не удалось создать товар' },
         { status: 500 }
       );
     }
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create product' },
+      { success: false, error: 'Не удалось создать товар' },
       { status: 500 }
     );
   }

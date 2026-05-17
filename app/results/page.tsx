@@ -1,5 +1,3 @@
-'use server';
-
 import { getActiveProducts } from '@/lib/supabase';
 import { mockProvider } from '@/lib/providers/mockProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -9,7 +7,18 @@ import Footer from '@/components/Footer';
 import GiftCard from '@/components/GiftCard';
 import ResultsTracker from '@/components/ResultsTracker';
 
-export default async function ResultsPage({ searchParams }: { searchParams: Record<string, string> }) {
+function getSearchParam(value: string | string[] | undefined) {
+  if (!value) return '';
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function ResultsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = await searchParams;
+
   // Get products from Supabase or fallback to mock
   let products;
   if (isSupabaseConfigured()) {
@@ -23,11 +32,11 @@ export default async function ResultsPage({ searchParams }: { searchParams: Reco
   }
 
   // Parse search params
-  const recipient = searchParams.recipient || '';
-  const budget = searchParams.budget || '';
-  const occasion = searchParams.occasion || '';
-  const interest = searchParams.interest || '';
-  const giftType = searchParams.giftType || '';
+  const recipient = getSearchParam(resolvedSearchParams.recipient);
+  const budget = getSearchParam(resolvedSearchParams.budget);
+  const occasion = getSearchParam(resolvedSearchParams.occasion);
+  const interest = getSearchParam(resolvedSearchParams.interest);
+  const giftType = getSearchParam(resolvedSearchParams.giftType);
 
   // Match products based on filters
   let matched;
@@ -66,7 +75,10 @@ export default async function ResultsPage({ searchParams }: { searchParams: Reco
             ))}
           </div>
 
-          <ResultsTracker count={matched.length} params={{recipient, budget, occasion: occasion || interest, interest: giftType}} />
+          <ResultsTracker
+            count={matched.length}
+            params={{ recipient, budget, occasion, interest, giftType }}
+          />
         </div>
       </main>
       <Footer />

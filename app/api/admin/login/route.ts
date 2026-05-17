@@ -12,14 +12,14 @@ export async function POST(request: NextRequest) {
 
     if (!password) {
       return NextResponse.json(
-        { success: false, error: 'Password required' },
+        { success: false, error: 'Требуется пароль' },
         { status: 400 }
       );
     }
 
     if (!verifyAdminPassword(password)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid password' },
+        { success: false, error: 'Неверный пароль' },
         { status: 401 }
       );
     }
@@ -29,19 +29,19 @@ export async function POST(request: NextRequest) {
 
     if (!sessionCreated) {
       return NextResponse.json(
-        { success: false, error: 'Failed to create session' },
+        { success: false, error: 'Не удалось создать сессию' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Admin session created',
+      message: 'Сессия администратора создана',
     });
   } catch (error) {
-    console.error('Error in admin login:', error);
+    console.error('Ошибка при входе в админку:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }
