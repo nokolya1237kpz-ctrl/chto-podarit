@@ -24,11 +24,29 @@ export default function GiftCard({ gift }: { gift: Product }) {
     : 'bg-rose-500/15 text-rose-200 border-rose-500/20 group-hover:border-rose-500/30';
 
   return (
-    <article className="premium-card rounded-[2rem] p-7 group">
-      <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-white group-hover:text-pink-200 transition">{gift.title}</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-400 group-hover:text-slate-300 transition">{gift.description}</p>
+    <article className="premium-card rounded-[2rem] overflow-hidden bg-slate-950/95 group">
+      <div className="relative h-60 overflow-hidden bg-slate-900/80">
+        {gift.imageUrl ? (
+          <img
+            src={gift.imageUrl}
+            alt={gift.title}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-slate-400">
+            <div className="text-center px-4">
+              <div className="mb-3 text-4xl">🛍️</div>
+              <p className="text-sm font-semibold">Нет изображения</p>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-7">
+        <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white group-hover:text-pink-200 transition">{gift.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-400 group-hover:text-slate-300 transition">{gift.description}</p>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
             {gift.recipients.length > 0 && (
@@ -82,6 +100,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
           {copied ? 'Скопировано' : 'Скопировать'}
         </button>
       </div>
-    </article>
+    </div>
+  </article>
   );
 }

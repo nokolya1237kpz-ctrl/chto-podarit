@@ -4,8 +4,23 @@ import PopularCollections from '../components/PopularCollections';
 import LottiePlayer from '../components/LottiePlayer';
 import ScrollReveal from '../components/ScrollReveal';
 import HeroPreview from '../components/HeroPreview';
+import { getActiveProducts } from '@/lib/supabase';
+import { mockProvider } from '@/lib/providers/mockProvider';
+import type { Product } from '@/types/product';
 
-export default function Home() {
+export default async function Home() {
+  let products: Product[] = [];
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    products = await getActiveProducts();
+  }
+
+  let previewProducts: Product[] = [];
+  if (products.length > 0) {
+    previewProducts = products.slice(0, 2);
+  } else {
+    previewProducts = await mockProvider.searchProducts({ limit: 2 });
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.16),transparent_25%),linear-gradient(180deg,#070a12,#0b1020)] text-white">
       <Header />
@@ -23,7 +38,11 @@ export default function Home() {
                   Быстро. Персонально. Премиально.
                 </div>
                 <div className="space-y-4">
-                  <h1 className="hero-title-3d">Найдём идеальный подарок за 30 секунд</h1>
+                  <h1 className="hero-title-3d">
+                    <span className="text-white">Найдём</span>{' '}
+                    <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">идеальный подарок</span>{' '}
+                    <span className="text-white drop-shadow-[0_0_16px_rgba(255,255,255,0.18)]">за 30 секунд</span>
+                  </h1>
                   <p className="text-lg leading-8 text-slate-300 max-w-2xl font-light">Ответьте на 5 вопросов и получите 10 персональных идей с ценами, вау‑рейтингом и ссылками на товары.</p>
                 </div>
 
@@ -53,7 +72,7 @@ export default function Home() {
                 <div className="relative rounded-[2rem] border border-white/12 bg-slate-950/95 p-1 shadow-[0_40px_120px_rgba(15,23,42,0.35)] backdrop-blur-xl overflow-hidden group">
                   <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
                   <div className="relative rounded-[1.95rem] overflow-hidden">
-                    <HeroPreview />
+                    <HeroPreview products={previewProducts} />
                   </div>
                 </div>
               </ScrollReveal>
