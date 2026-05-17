@@ -38,18 +38,20 @@ export default async function ResultsPage({
   const interest = getSearchParam(resolvedSearchParams.interest);
   const giftType = getSearchParam(resolvedSearchParams.giftType);
 
-  // Match products based on filters
-  let matched;
-  if (recipient || budget || interest || occasion || giftType) {
-    matched = matchProducts(products, {
-      recipient: recipient || undefined,
-      budget: budget || undefined,
-      interests: interest ? [interest] : undefined,
-      occasions: occasion ? [occasion] : undefined,
-      giftTypes: giftType ? [giftType] : undefined,
-    });
-  } else {
-    matched = getUniversalProducts(products);
+  const hasFilters = Boolean(recipient || budget || interest || occasion || giftType);
+  const filters = {
+    recipient: recipient || undefined,
+    budget: budget || undefined,
+    interests: interest ? [interest] : undefined,
+    occasions: occasion ? [occasion] : undefined,
+    giftTypes: giftType ? [giftType] : undefined,
+  };
+
+  let matched = hasFilters ? matchProducts(products, filters) : products;
+  const noMatchFallback = hasFilters && matched.length === 0;
+
+  if (noMatchFallback) {
+    matched = products.slice(0, 10);
   }
 
   return (
@@ -58,8 +60,28 @@ export default async function ResultsPage({
       <main className="pt-24 px-4 pb-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl space-y-9">
           <div className="premium-card rounded-[2.5rem] border-white/10 bg-slate-950/80 p-8 sm:p-10 shadow-[0_40px_120px_rgba(15,23,42,0.45)] backdrop-blur-3xl">
-            <h1 className="text-3xl font-bold text-white mb-2">Ваши идеи подарков</h1>
-            <p className="mt-3 text-sm text-slate-400">Мы подобрали <span className="text-purple-300 font-semibold">{matched.length} лучших вариантов</span> под ваши ответы.</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">Ваши идеи подарков</h1>
+                <p className="text-sm text-slate-400">
+                  {hasFilters
+                    ? `Найдено ${matched.length} подходящих вариантов по вашему запросу.`
+                    : `Показаны все товары (${products.length}).`}
+                </p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+                {hasFilters ? 'Сопоставленные товары' : 'Популярные идеи'}
+              </div>
+            </div>
+
+            <p className="mt-3 text-sm text-slate-400">
+              {noMatchFallback
+                ? 'По заданным параметрам товаров не найдено. Показываем первые активные товары.'
+                : hasFilters
+                ? 'Мы подобрали товары, соответствующие выбранным фильтрам.'
+                : 'Здесь отображаются все активные товары из базы данных.'}
+            </p>
+
             <div className="mt-7 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.26em]">
               {recipient ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">👤 {recipient}</span> : null}
               {budget ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">💳 {budget}</span> : null}
