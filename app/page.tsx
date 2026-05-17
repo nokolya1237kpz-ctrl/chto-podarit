@@ -32,7 +32,7 @@ export default async function Home() {
                   Быстро. Персонально. Премиально.
                 </div>
                 <div className="space-y-4">
-                  <h1 className="hero-title-3d max-w-3xl text-[clamp(3.5rem,6vw,5.5rem)] leading-[0.95] sm:text-[clamp(4rem,6vw,6rem)]">
+                  <h1 className="max-w-3xl text-[clamp(3.5rem,6vw,5.5rem)] leading-[1.5] sm:text-[clamp(4rem,6vw,6rem)]">
                     <div className="text-white">Найдём</div>
                     <div className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">идеальный подарок</div>
                     <div className="text-white drop-shadow-[0_0_22px_rgba(255,255,255,0.18)]">за 30 секунд</div>
