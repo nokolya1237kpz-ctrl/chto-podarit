@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Product } from '@/types/product';
 import { getMarketplaceName } from '@/lib/marketplaces';
+import AdminShell from '@/components/admin/AdminShell';
 
 export default function AdminProductsPage() {
   const router = useRouter();
@@ -75,27 +76,30 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">Админ: Товары</h1>
-          <div className="space-x-4">
+    <AdminShell title="Товары">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-white/60">Список товаров</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
             <Link
               href="/admin/products/new"
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
+              className="rounded-2xl bg-purple-500 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600 transition"
             >
               Добавить товар
             </Link>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition"
             >
               Выход
             </button>
           </div>
         </div>
 
-        {/* Filters */}
+        <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+          {/* Filters */}
         <div className="bg-slate-900 border border-white/10 rounded-lg p-6 mb-8 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input
@@ -197,7 +201,8 @@ export default function AdminProductsPage() {
             )}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </AdminShell>
   );
 }

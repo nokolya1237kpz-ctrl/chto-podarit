@@ -7,6 +7,7 @@ export interface ProductSearchFilters {
   interests?: string[];
   occasions?: string[];
   giftTypes?: string[];
+  tags?: string[];
   minPrice?: number;
   maxPrice?: number;
   marketplace?: string;

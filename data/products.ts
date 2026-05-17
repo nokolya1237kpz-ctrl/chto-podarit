@@ -22,6 +22,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 20,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -42,6 +44,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'medium',
     tags: ['релакс', 'для дома'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -65,6 +69,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 33,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -85,6 +91,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['парфюм', 'премиум'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -108,6 +116,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 25,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -128,6 +138,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['уход за волосами', 'мужской'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -148,6 +160,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['домашний текстиль'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -168,6 +182,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['спортивная электроника'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -188,6 +204,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['кожаные изделия', 'премиум'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -208,6 +226,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['свечи', 'интерьер'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -228,6 +248,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['книги', 'образование'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -248,6 +270,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['спортивный инвентарь'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -271,6 +295,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 12,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -291,6 +317,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['сувениры', 'персональное'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -311,6 +339,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['фотоаппараты', 'хобби'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -331,6 +361,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['кулинария', 'для кухни'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -354,6 +386,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 20,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -374,6 +408,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'medium',
     tags: ['музыка', 'интерьер'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -394,6 +430,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['украшения', 'золото'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -417,6 +455,8 @@ export const MOCK_PRODUCTS: Product[] = [
     isBestPrice: true,
     discountPercent: 16,
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -437,6 +477,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['книги', 'путешествия'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -457,6 +499,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'medium',
     tags: ['кинотеатр', 'техника'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -477,6 +521,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['макияж', 'косметика'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -497,6 +543,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['личная гигиена'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -517,6 +565,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['туризм', 'спортивная экипировка'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -537,6 +587,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['инструменты', 'измерение'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -557,6 +609,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['кухня', 'кофе'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -577,6 +631,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['аксессуары', 'кожа'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -597,6 +653,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['умный дом', 'электроника'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
   {
@@ -617,6 +675,8 @@ export const MOCK_PRODUCTS: Product[] = [
     riskLevel: 'low',
     tags: ['музыка', 'подписка'],
     isActive: true,
+    sourceProvider: 'manual',
+    status: 'active',
     sourceType: 'mock',
   },
 ];

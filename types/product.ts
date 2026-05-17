@@ -1,4 +1,4 @@
-export type MarketplaceId = 
+export type MarketplaceId =
   | 'ozon'
   | 'wildberries'
   | 'yandex_market'
@@ -8,9 +8,20 @@ export type MarketplaceId =
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
-export type SourceType = 'manual' | 'admitad' | 'api' | 'mock';
+export type SourceProvider =
+  | 'manual'
+  | 'epn'
+  | 'admitad'
+  | 'cityads'
+  | 'aliexpress'
+  | 'yandex_market'
+  | 'ozon'
+  | 'wildberries'
+  | 'direct_api';
 
-export type AffiliateSourceType = 'manual' | 'admitad' | 'cityads' | 'direct_api';
+export type SourceType = SourceProvider | 'api' | 'mock';
+
+export type ProductStatus = 'draft' | 'active';
 
 export interface Product {
   id: string;
@@ -25,6 +36,8 @@ export interface Product {
   admitadDeeplink?: string;
   admitadCampaignId?: string;
   admitadOfferId?: string;
+  epnToken?: string;
+  advertiserName?: string;
   externalProductId?: string;
   imageUrl?: string;
   recipients: string[];
@@ -32,34 +45,55 @@ export interface Product {
   interests: string[];
   occasions: string[];
   giftTypes: string[];
+  tags: string[];
   wowRating: number;
   riskLevel: RiskLevel;
-  tags: string[];
   isBestPrice?: boolean;
   discountPercent?: number;
   isActive: boolean;
-  sourceType: SourceType;
+  status: ProductStatus;
+  sourceProvider: SourceProvider;
+  sourceType?: SourceType;
+  lastSyncedAt?: string;
   lastPriceCheckedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface AffiliateSource {
+export interface ProductSource {
   id: string;
+  providerId: SourceProvider;
   name: string;
-  type: AffiliateSourceType;
-  marketplace?: string;
-  baseUrl?: string;
+  enabled: boolean;
   apiBaseUrl?: string;
-  isEnabled: boolean;
-  admitadCampaignId?: string;
-  admitadWebsiteId?: string;
+  affiliateId?: string;
+  campaignId?: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// For database row transformation
+export interface ProductSourceWithStats extends ProductSource {
+  productCount?: number;
+  lastSyncAt?: string | null;
+  syncStatus?: string | null;
+  syncMessage?: string | null;
+  syncedCount?: number | null;
+  failedCount?: number | null;
+  durationMs?: number | null;
+}
+
+export interface ProductSyncLog {
+  id: string;
+  providerId: SourceProvider;
+  status: 'success' | 'warning' | 'error';
+  message: string;
+  syncedCount?: number | null;
+  failedCount?: number | null;
+  durationMs?: number | null;
+  createdAt: string;
+}
+
 export interface ProductRow {
   id: string;
   title: string;
@@ -73,6 +107,8 @@ export interface ProductRow {
   admitad_deeplink: string | null;
   admitad_campaign_id: string | null;
   admitad_offer_id: string | null;
+  epn_token: string | null;
+  advertiser_name: string | null;
   external_product_id: string | null;
   image_url: string | null;
   recipients: string[];
@@ -80,29 +116,41 @@ export interface ProductRow {
   interests: string[];
   occasions: string[];
   gift_types: string[];
+  tags: string[];
   wow_rating: number;
   risk_level: string;
-  tags: string[];
   is_best_price: boolean;
   discount_percent: number | null;
   is_active: boolean;
-  source_type: string;
+  status: string;
+  source_provider: string;
+  source_type: string | null;
+  last_synced_at: string | null;
   last_price_checked_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface AffiliateSourceRow {
+export interface ProductSourceRow {
   id: string;
+  provider_id: string;
   name: string;
-  type: string;
-  marketplace: string | null;
-  base_url: string | null;
+  enabled: boolean;
   api_base_url: string | null;
-  is_enabled: boolean;
-  admitad_campaign_id: string | null;
-  admitad_website_id: string | null;
+  affiliate_id: string | null;
+  campaign_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProductSyncLogRow {
+  id: string;
+  provider_id: string;
+  status: 'success' | 'warning' | 'error';
+  message: string;
+  synced_count: number | null;
+  failed_count: number | null;
+  duration_ms: number | null;
+  created_at: string;
 }

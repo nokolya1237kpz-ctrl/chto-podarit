@@ -54,6 +54,8 @@ export default function ProductForm({
     isBestPrice: initialProduct?.isBestPrice || false,
     discountPercent: initialProduct?.discountPercent,
     isActive: initialProduct?.isActive !== false,
+    status: initialProduct?.status || 'draft',
+    sourceProvider: initialProduct?.sourceProvider || 'manual',
     sourceType: initialProduct?.sourceType || 'manual',
   });
 

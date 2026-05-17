@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ProductForm from '@/components/admin/ProductForm';
+import AdminShell from '@/components/admin/AdminShell';
 import type { Product } from '@/types/product';
 import { useParams } from 'next/navigation';
 
@@ -51,12 +52,14 @@ export default function EditProductPage() {
   }
 
   return (
-    <ProductForm
-      productId={productId}
-      initialProduct={product}
-      onSubmit={handleSubmit}
-      isLoading={loading}
-      title="Редактировать товар"
-    />
+    <AdminShell title="Редактировать товар">
+      <ProductForm
+        productId={productId}
+        initialProduct={product}
+        onSubmit={handleSubmit}
+        isLoading={loading}
+        title="Редактировать товар"
+      />
+    </AdminShell>
   );
 }

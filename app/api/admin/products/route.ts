@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query') || undefined;
     const marketplace = searchParams.get('marketplace') || undefined;
-    const sourceType = searchParams.get('sourceType') || undefined;
+    const sourceProvider = searchParams.get('sourceType') || undefined;
     const isActive = searchParams.get('isActive')
       ? searchParams.get('isActive') === 'true'
       : undefined;
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const products = await searchProducts({
       query: query,
       marketplace: marketplace,
-      sourceType: sourceType,
+      sourceProvider: sourceProvider,
       isActive: isActive,
     });
 

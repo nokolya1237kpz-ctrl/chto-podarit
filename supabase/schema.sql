@@ -71,6 +71,18 @@ create table if not exists affiliate_sources (
 create index if not exists affiliate_sources_type_idx on affiliate_sources(type);
 create index if not exists affiliate_sources_marketplace_idx on affiliate_sources(marketplace);
 
+-- Product sync logs table
+create table if not exists product_sync_logs (
+  id uuid primary key default gen_random_uuid(),
+  provider_id text not null,
+  status text not null,
+  message text not null,
+  synced_count int,
+  failed_count int,
+  duration_ms int,
+  created_at timestamp with time zone default now()
+);
+
 -- Update trigger function
 create or replace function set_updated_at()
 returns trigger as $$

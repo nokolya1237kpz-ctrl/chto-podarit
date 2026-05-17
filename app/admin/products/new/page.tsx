@@ -1,6 +1,7 @@
 'use client';
 
 import ProductForm from '@/components/admin/ProductForm';
+import AdminShell from '@/components/admin/AdminShell';
 import type { Product } from '@/types/product';
 
 export default function NewProductPage() {
@@ -18,9 +19,8 @@ export default function NewProductPage() {
   }
 
   return (
-    <ProductForm
-      onSubmit={handleSubmit}
-      title="Добавить товар"
-    />
+    <AdminShell title="Добавить товар">
+      <ProductForm onSubmit={handleSubmit} title="Добавить товар" />
+    </AdminShell>
   );
 }
