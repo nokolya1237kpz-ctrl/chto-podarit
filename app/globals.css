@@ -116,6 +116,24 @@ body::before {
   text-shadow: 0 12px 30px rgba(40,14,95,0.15);
 }
 
+.hero-h1 {
+  letter-spacing: -0.04em;
+}
+
+.hero-h1 > div {
+  font-weight: 900;
+  line-height: 1;
+}
+
+.hero-h1 > div:first-child,
+.hero-h1 > div:nth-child(2) {
+  font-size: clamp(2.625rem, 6vw, 5.5rem);
+}
+
+.hero-h1 > div:last-child {
+  font-size: clamp(1.875rem, 4.5vw, 3.75rem);
+}
+
 .hero-title-3d { 
   font-size: clamp(3.2rem, 6vw, 5rem); 
   line-height: 1.08; 

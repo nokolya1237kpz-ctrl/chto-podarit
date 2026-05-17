@@ -31,10 +31,10 @@ export default async function Home() {
                   <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
                   Быстро. Персонально. Премиально.
                 </div>
-                <div className="space-y-4">
-                  <h1 className="max-w-3xl text-[clamp(3.5rem,6vw,5.5rem)] leading-[1.5] sm:text-[clamp(4rem,6vw,6rem)]">
+                <div className="space-y-6">
+                  <h1 className="hero-h1 max-w-2xl">
                     <div className="text-white">Найдём</div>
-                    <div className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">идеальный подарок</div>
+                    <div className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent whitespace-nowrap">идеальный подарок</div>
                     <div className="text-white drop-shadow-[0_0_22px_rgba(255,255,255,0.18)]">за 30 секунд</div>
                   </h1>
                   <p className="text-lg leading-8 text-slate-300 max-w-2xl font-light">Ответьте на 5 вопросов и получите 10 персональных идей с ценами, вау‑рейтингом и ссылками на товары.</p>
