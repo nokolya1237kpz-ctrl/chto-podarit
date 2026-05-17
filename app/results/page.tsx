@@ -51,26 +51,26 @@ export default async function ResultsPage({
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.16),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.1),transparent_25%),linear-gradient(180deg,#05060f,#090d1a)] text-white overflow-hidden">
+    <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.16),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.1),transparent_25%),linear-gradient(180deg,#05060f,#090d1a)] text-white">
       <Header />
-      <main className="pt-24 px-4 pb-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl space-y-9">
-          <div className="premium-card rounded-[2.5rem] border-white/10 bg-slate-950/80 p-8 sm:p-10 shadow-[0_40px_120px_rgba(15,23,42,0.45)] backdrop-blur-3xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <main className="w-full max-w-full overflow-x-hidden pt-20 sm:pt-24 px-3 sm:px-4 pb-20 sm:px-6 lg:px-8 box-border">
+        <div className="mx-auto max-w-7xl w-full space-y-6 sm:space-y-9 box-border overflow-x-hidden">
+          <div className="premium-card rounded-2xl sm:rounded-[2.5rem] border-white/10 bg-slate-950/80 p-4 sm:p-8 lg:p-10 shadow-[0_40px_120px_rgba(15,23,42,0.45)] backdrop-blur-3xl">
+            <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Ваши идеи подарков</h1>
-                <p className="text-sm text-slate-400">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Ваши идеи подарков</h1>
+                <p className="text-xs sm:text-sm text-slate-400">
                   {hasFilters
                     ? `Найдено ${matched.length} подходящих вариантов по вашему запросу.`
                     : `Показаны все товары (${products.length}).`}
                 </p>
               </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+              <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-white/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-white/80">
                 {hasFilters ? 'Сопоставленные товары' : 'Популярные идеи'}
               </div>
             </div>
 
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-400">
               {noMatchFallback
                 ? 'Пока точных совпадений нет — показываем популярные идеи.'
                 : hasFilters
@@ -78,16 +78,16 @@ export default async function ResultsPage({
                 : 'Здесь отображаются все активные товары из базы данных.'}
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.26em]">
-              {recipient ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">👤 {recipient}</span> : null}
-              {budget ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">💳 {budget}</span> : null}
-              {occasion ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">🎉 {occasion}</span> : null}
-              {interest ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">✨ {interest}</span> : null}
-              {giftType ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-4 py-2.5 text-slate-300 group-hover:text-slate-100 transition">💎 {giftType}</span> : null}
+            <div className="mt-4 sm:mt-7 flex flex-wrap gap-2 sm:gap-3 text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.26em]">
+              {recipient ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-3 sm:px-4 py-2 sm:py-2.5 text-slate-300 group-hover:text-slate-100 transition">👤 {recipient}</span> : null}
+              {budget ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-3 sm:px-4 py-2 sm:py-2.5 text-slate-300 group-hover:text-slate-100 transition">💳 {budget}</span> : null}
+              {occasion ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-3 sm:px-4 py-2 sm:py-2.5 text-slate-300 group-hover:text-slate-100 transition">🎉 {occasion}</span> : null}
+              {interest ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-3 sm:px-4 py-2 sm:py-2.5 text-slate-300 group-hover:text-slate-100 transition">✨ {interest}</span> : null}
+              {giftType ? <span className="rounded-full bg-gradient-to-r from-purple-500/16 to-pink-500/14 border border-white/12 px-3 sm:px-4 py-2 sm:py-2.5 text-slate-300 group-hover:text-slate-100 transition">💎 {giftType}</span> : null}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-7 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:gap-7 xl:grid-cols-2 w-full">
             {matched.map((product) => (
               <GiftCard key={product.id} gift={product} />
             ))}
