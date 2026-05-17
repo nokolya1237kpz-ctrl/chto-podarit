@@ -29,8 +29,8 @@ export default function GiftCard({ gift }: { gift: Product }) {
       <SafeProductImage
         imageUrl={gift.imageUrl}
         alt={gift.title || 'Товар'}
-        wrapperClassName="h-56 w-full overflow-hidden bg-slate-900/80"
-        className="h-full w-full object-cover"
+        wrapperClassName="relative flex items-center justify-center h-80 w-full overflow-hidden bg-white"
+        className="h-full w-full object-contain"
       />
 
       <div className="p-6 flex flex-col gap-5">

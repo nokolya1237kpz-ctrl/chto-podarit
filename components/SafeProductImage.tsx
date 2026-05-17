@@ -11,8 +11,8 @@ interface SafeProductImageProps {
 export default function SafeProductImage({
   imageUrl,
   alt = 'product image',
-  className = '',
-  wrapperClassName = '',
+  className = 'h-full w-full object-contain',
+  wrapperClassName = 'relative flex items-center justify-center overflow-hidden bg-white',
 }: SafeProductImageProps) {
   const [hasError, setHasError] = useState(false);
   const showImage = Boolean(imageUrl) && !hasError;

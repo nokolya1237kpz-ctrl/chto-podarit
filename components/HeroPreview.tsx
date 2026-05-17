@@ -29,8 +29,8 @@ export default function HeroPreview({ products }: HeroPreviewProps) {
               <SafeProductImage
                 imageUrl={product?.imageUrl}
                 alt={product?.title || 'Товар'}
-                wrapperClassName="h-52 w-full overflow-hidden rounded-[1.75rem] bg-slate-900/80"
-                className="h-full w-full object-cover"
+                wrapperClassName="relative flex items-center justify-center h-48 w-full overflow-hidden rounded-[1.75rem] bg-white"
+                className="h-full w-full object-contain"
               />
               <div className="relative p-5">
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-500">{product?.marketplace || 'Маркетплейс'}</p>
