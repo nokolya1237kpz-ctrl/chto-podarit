@@ -47,11 +47,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Не указана партнерская ссылка' }, { status: 400 });
     }
 
-    const metadata = await fetchEpnProductMetadata(affiliateUrl, epnToken);
+    let metadata = null;
+    let metadataError: string | null = null;
 
-    const productStatus = (body.status === 'active' || body.status === 'draft')
-      ? body.status
-      : 'draft';
+    try {
+      metadata = await fetchEpnProductMetadata(affiliateUrl, epnToken);
+    } catch (error) {
+      metadataError = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching ePN metadata for quick-add:', error);
+      metadata = null;
+    }
+
+    const createAsDraft = !metadata;
+    const productStatus = createAsDraft ? 'draft' : (body.status === 'active' || body.status === 'draft' ? body.status : 'draft');
 
     const product = {
       title: body.title || metadata?.title || 'Новый товар ePN',
@@ -77,12 +85,12 @@ export async function POST(request: NextRequest) {
       riskLevel: body.riskLevel || 'low',
       isBestPrice: body.isBestPrice ?? false,
       discountPercent: body.discountPercent ?? null,
-      isActive: true,
+      isActive: createAsDraft ? false : true,
       status: productStatus,
-      lastSyncedAt: new Date().toISOString(),
+      lastSyncedAt: createAsDraft ? undefined : new Date().toISOString(),
     };
 
-    if (product.title && product.price > 0 && product.imageUrl) {
+    if (!createAsDraft && product.title && product.price > 0 && product.imageUrl) {
       product.status = 'active';
     }
 
@@ -91,9 +99,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Не удалось создать товар' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: saved });
+    return NextResponse.json({
+      success: true,
+      data: saved,
+      warning: createAsDraft ? 'Автоматически получить данные товара не удалось. Черновик создан — заполните информацию вручную.' : undefined,
+      metadataError: metadataError || undefined,
+    });
   } catch (error) {
     console.error('Error quick-adding ePN product:', error);
-    return NextResponse.json({ success: false, error: 'Ошибка создания товара' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Ошибка создания товара';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

@@ -17,6 +17,8 @@ create table if not exists products (
   admitad_deeplink text,
   admitad_campaign_id text,
   admitad_offer_id text,
+  epn_token text,
+  advertiser_name text,
   external_product_id text,
 
   image_url text,
@@ -34,7 +36,8 @@ create table if not exists products (
   is_best_price boolean default false,
   discount_percent int,
   is_active boolean default true,
-
+  status text default 'active',
+  source_provider text default 'manual',
   source_type text default 'manual',
   last_price_checked_at timestamp with time zone,
   created_at timestamp with time zone default now(),

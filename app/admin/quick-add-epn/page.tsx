@@ -73,7 +73,7 @@ export default function AdminQuickAddEpnPage() {
         setMessage('Метаданные найдены. Проверьте предварительный просмотр.');
       } else {
         setPreview(null);
-        setMessage('Метаданные не найдены. Товар будет создан как черновик.');
+        setMessage('Автоматически получить данные товара не удалось. Черновик будет создан — заполните информацию вручную.');
       }
     } catch (error) {
       console.error(error);
@@ -109,8 +109,8 @@ export default function AdminQuickAddEpnPage() {
       const data = await response.json();
       if (response.ok && data.success) {
         setSubmittedProduct(data.data);
-        setMessage('Товар успешно создан.');
-        router.push('/admin/products');
+        const nextPath = data.data?.id ? `/admin/products/${data.data.id}/edit` : '/admin/products';
+        router.push(nextPath);
       } else {
         setMessage(data.error || 'Не удалось создать товар');
       }

@@ -100,7 +100,7 @@ export default function AdminDraftsPage() {
                 </div>
                 <div className="p-6 space-y-4">
                   <div>
-                    <h3 className="text-xl font-semibold text-white">{product.title}</h3>
+                    <h3 className="text-xl font-semibold text-white">{product.title || 'Черновик товара'}</h3>
                     <p className="mt-2 text-sm text-white/60">{product.marketplace}</p>
                   </div>
                   <div className="grid gap-2 text-sm text-white/70">
