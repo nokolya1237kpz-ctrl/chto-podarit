@@ -1,45 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActiveProducts } from '@/lib/supabase';
+import { getActiveProducts, supabaseAdmin } from '@/lib/supabase';
 import { mockProvider } from '@/lib/providers/mockProvider';
-import { isSupabaseConfigured } from '@/lib/supabase';
 
 /**
  * GET /api/products
  * Public endpoint to get active products
- * Falls back to mock data if Supabase is not configured
  */
 export async function GET(request: NextRequest) {
   try {
-    let products;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Try to get from Supabase if configured
-    if (isSupabaseConfigured()) {
-      products = await getActiveProducts();
-      
-      // Fall back to mock if no products found
-      if (products.length === 0) {
-        products = await mockProvider.searchProducts({
-          limit: 100,
-        });
-      }
-    } else {
-      // Use mock provider if Supabase not configured
-      products = await mockProvider.searchProducts({
-        limit: 100,
+    const useSupabase = Boolean(supabaseUrl && serviceRoleKey && supabaseAdmin);
+
+    if (useSupabase) {
+      // Use the admin client and run the authoritative query
+      const products = await getActiveProducts(supabaseAdmin as any, { throwOnError: true });
+      return NextResponse.json({
+        success: true,
+        data: products || [],
+        count: (products || []).length,
+        source: 'supabase',
       });
     }
 
+    // Supabase not configured — fall back to mock provider (only when not configured)
+    const products = await mockProvider.searchProducts({ limit: 100 });
     return NextResponse.json({
       success: true,
       data: products,
       count: products.length,
+      source: 'mock',
     });
   } catch (error) {
     console.error('Error fetching products:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch products';
+    // If SUPABASE is configured, always report source as 'supabase' on errors
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const useSupabase = Boolean(supabaseUrl && serviceRoleKey && supabaseAdmin);
+
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch products',
+        error: message,
+        source: useSupabase ? 'supabase' : 'mock',
       },
       { status: 500 }
     );

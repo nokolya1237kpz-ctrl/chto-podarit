@@ -76,7 +76,8 @@ function rowToProduct(row: ProductRow): Product {
 }
 
 export async function getActiveProducts(
-  supabase = supabaseClient
+  supabase = supabaseClient,
+  options?: { throwOnError?: boolean }
 ): Promise<Product[]> {
   if (!supabase) return [];
 
@@ -90,12 +91,18 @@ export async function getActiveProducts(
 
     if (error) {
       console.error('Error fetching products:', error);
+      if (options?.throwOnError) {
+        throw error;
+      }
       return [];
     }
 
     return (data as ProductRow[]).map(rowToProduct);
   } catch (error) {
     console.error('Error fetching products:', error);
+    if (options?.throwOnError) {
+      throw error;
+    }
     return [];
   }
 }

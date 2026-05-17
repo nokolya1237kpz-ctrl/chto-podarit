@@ -1,7 +1,7 @@
 import { getActiveProducts } from '@/lib/supabase';
 import { mockProvider } from '@/lib/providers/mockProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { matchProducts, getUniversalProducts } from '@/lib/productMatcher';
+import { matchProducts } from '@/lib/productMatcher';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GiftCard from '@/components/GiftCard';
@@ -19,14 +19,10 @@ export default async function ResultsPage({
 }) {
   const resolvedSearchParams = await searchParams;
 
-  // Get products from Supabase or fallback to mock
-  let products;
+  // Get products from Supabase or fallback to mock if not configured
+  let products = [];
   if (isSupabaseConfigured()) {
     products = await getActiveProducts();
-    // Fall back to mock if empty
-    if (products.length === 0) {
-      products = await mockProvider.searchProducts({ limit: 100 });
-    }
   } else {
     products = await mockProvider.searchProducts({ limit: 100 });
   }

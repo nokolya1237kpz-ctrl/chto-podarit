@@ -4,22 +4,16 @@ import PopularCollections from '../components/PopularCollections';
 import LottiePlayer from '../components/LottiePlayer';
 import ScrollReveal from '../components/ScrollReveal';
 import HeroPreview from '../components/HeroPreview';
-import { getActiveProducts } from '@/lib/supabase';
-import { mockProvider } from '@/lib/providers/mockProvider';
+import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 
 export default async function Home() {
   let products: Product[] = [];
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (isSupabaseConfigured()) {
     products = await getActiveProducts();
   }
 
-  let previewProducts: Product[] = [];
-  if (products.length > 0) {
-    previewProducts = products.slice(0, 2);
-  } else {
-    previewProducts = await mockProvider.searchProducts({ limit: 2 });
-  }
+  const previewProducts = products.slice(0, 2);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.16),transparent_25%),linear-gradient(180deg,#070a12,#0b1020)] text-white">
