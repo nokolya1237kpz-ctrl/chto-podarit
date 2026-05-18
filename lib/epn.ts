@@ -238,7 +238,7 @@ export async function epnFetch(
 
 export async function getEpnOffers(): Promise<EpnOffer[]> {
   const response = await epnFetch('/offers/list', {
-    query: { v: '2', locale: 'ru', limit: 50 },
+    query: { v: '2', lang: 'ru', viewRules: 1, locale: 'ru', limit: 50 },
   });
   return normalizeEpnOfferList(response);
 }
@@ -249,7 +249,7 @@ export async function searchEpnOffers(query: string, limit = 20): Promise<EpnOff
   }
 
   const response = await epnFetch('/offers/list', {
-    query: { v: '2', locale: 'ru', q: query.trim(), limit },
+    query: { v: '2', lang: 'ru', viewRules: 1, locale: 'ru', q: query.trim(), limit },
   });
   return normalizeEpnOfferList(response);
 }
@@ -446,7 +446,7 @@ function normalizeEpnOffer(offer: any): EpnOffer {
   };
 }
 
-function normalizeEpnOfferList(response: any): EpnOffer[] {
+export function normalizeEpnOfferList(response: any): EpnOffer[] {
   const items = response?.data?.offers || response?.data?.items || response?.offers || response?.items || response?.data || [];
   if (!Array.isArray(items)) {
     return [];

@@ -52,6 +52,9 @@ export default function EpnAdminPage() {
   const [offerQuery, setOfferQuery] = useState('');
   const [offers, setOffers] = useState<EpnOffer[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);
+  const [requestUrl, setRequestUrl] = useState('');
+  const [requestParams, setRequestParams] = useState<Record<string, any> | null>(null);
+  const [responseBody, setResponseBody] = useState<any>(null);
   const [goodsQuery, setGoodsQuery] = useState('');
   const [goods, setGoods] = useState<EpnGood[]>([]);
   const [goodsLoading, setGoodsLoading] = useState(false);
@@ -94,9 +97,15 @@ export default function EpnAdminPage() {
     try {
       const res = await fetch(`/api/admin/epn/offers?q=${encodeURIComponent(offerQuery)}`);
       const data = await res.json();
+      setRequestUrl(res.url);
+      setRequestParams({ q: offerQuery.trim(), limit: 20 });
+      setResponseBody(data.debug || data);
+
       if (!res.ok) {
-        throw new Error(data.error || 'Ошибка поиска офферов');
+        const errorMessage = data.error || 'Ошибка поиска офферов';
+        throw new Error(errorMessage);
       }
+
       setOffers(data.offers || []);
       setMessage(`Найдено ${data.count || 0} офферов`);
     } catch (err) {
@@ -220,6 +229,26 @@ export default function EpnAdminPage() {
             </div>
             <span className="text-xs uppercase tracking-[0.3em] text-white/40">{offers.length} офферов</span>
           </div>
+          {requestUrl ? (
+            <div className="mt-4 space-y-3 rounded-3xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-200">
+              <div>
+                <div className="font-semibold text-slate-100">Request URL</div>
+                <div className="break-all text-slate-300">{requestUrl}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-100">Request params</div>
+                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
+                  {JSON.stringify(requestParams, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-100">Response body</div>
+                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
+                  {JSON.stringify(responseBody, null, 2)}
+                </pre>
+              </div>
+            </div>
+          ) : null}
           {offers.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/10 p-6 text-center text-slate-400">Результаты появятся после поиска</div>
           ) : (
