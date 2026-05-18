@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { epnFetch, normalizeEpnOfferList } from '@/lib/epn';
+import { getEpnOffers, searchEpnOffers } from '@/lib/epn';
 
 const apiBaseUrl = process.env.EPN_API_BASE_URL || 'https://app.epn.bz';
 
@@ -9,41 +9,29 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get('q') || undefined;
   const limit = Number(searchParams.get('limit') || '20');
 
-  const requestParams = {
-    v: '2',
-    lang: 'ru',
-    viewRules: 1,
-    locale: 'ru',
-    q: query?.trim() || undefined,
-    limit,
-  };
-
-  const requestUrl = new URL('/offers/list', apiBaseUrl);
-  Object.entries(requestParams).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      requestUrl.searchParams.set(key, String(value));
-    }
-  });
-
   try {
     const isAdmin = await verifyAdminSession();
     if (!isAdmin) {
       return NextResponse.json({ success: false, error: 'Нет доступа' }, { status: 401 });
     }
 
-    const responseBody = await epnFetch('/offers/list', {
-      query: requestParams,
+    const result = query ? await searchEpnOffers(query, limit) : await getEpnOffers();
+
+    const requestUrl = new URL('/offers/list', apiBaseUrl);
+    Object.entries(result.requestParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        requestUrl.searchParams.set(key, String(value));
+      }
     });
-    const offers = normalizeEpnOfferList(responseBody);
 
     return NextResponse.json({
       success: true,
-      offers,
-      count: offers.length,
+      offers: result.offers,
+      count: result.offers.length,
       debug: {
         requestUrl: requestUrl.toString(),
-        requestParams,
-        responseBody,
+        requestParams: result.requestParams,
+        responseBody: result.responseBody,
       },
     });
   } catch (error) {
@@ -59,8 +47,8 @@ export async function GET(request: NextRequest) {
         error: message,
         details,
         debug: {
-          requestUrl: requestUrl.toString(),
-          requestParams,
+          requestUrl: request?.url || '',
+          requestParams: { q: query?.trim() || undefined, limit, lang: 'ru', locale: 'ru', viewRules: 'unknown' },
           responseBody: details || null,
         },
       },

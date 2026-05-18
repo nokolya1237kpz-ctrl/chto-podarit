@@ -97,8 +97,8 @@ export default function EpnAdminPage() {
     try {
       const res = await fetch(`/api/admin/epn/offers?q=${encodeURIComponent(offerQuery)}`);
       const data = await res.json();
-      setRequestUrl(res.url);
-      setRequestParams({ q: offerQuery.trim(), limit: 20 });
+      setRequestUrl(data.debug?.requestUrl || res.url);
+      setRequestParams(data.debug?.requestParams || { q: offerQuery.trim(), limit: 20 });
       setResponseBody(data.debug || data);
 
       if (!res.ok) {

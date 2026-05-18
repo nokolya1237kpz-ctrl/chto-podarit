@@ -54,9 +54,12 @@ export interface EpnGood {
 
 class EpnApiError extends Error {
   details?: any;
-  constructor(message: string, details?: any) {
+  status?: number;
+
+  constructor(message: string, details?: any, status?: number) {
     super(message);
     this.details = details;
+    this.status = status;
   }
 }
 
@@ -79,6 +82,17 @@ function formatEpnErrorMessage(body: any, status: number, statusText: string) {
   const details = body?.data?.attributes || body?.error || body?.message || body;
   const detailText = typeof details === 'string' ? details : JSON.stringify(details);
   return `ePN API error: ${status} ${statusText} - ${detailText}`;
+}
+
+function isViewRulesError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes('viewrules') || message.includes('view_rules') || message.includes('view rules');
+}
+
+export interface EpnOffersFetchResult {
+  offers: EpnOffer[];
+  requestParams: Record<string, any>;
+  responseBody: any;
 }
 
 export async function getEpnSsidToken(): Promise<string> {
@@ -104,7 +118,7 @@ export async function getEpnSsidToken(): Promise<string> {
   }
 
   if (!response.ok) {
-    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body);
+    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
   const token = body?.data?.attributes?.ssid_token || body?.ssid_token;
@@ -154,7 +168,7 @@ export async function getEpnAccessToken(): Promise<string> {
   }
 
   if (!response.ok) {
-    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body);
+    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
   const accessToken = body?.data?.attributes?.access_token || body?.access_token || body?.accessToken;
@@ -230,28 +244,55 @@ export async function epnFetch(
   }
 
   if (!response.ok) {
-    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body);
+    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
   return body;
 }
 
-export async function getEpnOffers(): Promise<EpnOffer[]> {
-  const response = await epnFetch('/offers/list', {
-    query: { v: '2', lang: 'ru', viewRules: 1, locale: 'ru', limit: 50 },
-  });
-  return normalizeEpnOfferList(response);
+async function fetchEpnOffersWithViewRules(
+  requestParams: Record<string, any>
+): Promise<EpnOffersFetchResult> {
+  const viewRulesOptions = ['true', '1', 'false', '0'];
+  let lastError: unknown = null;
+
+  for (const viewRules of viewRulesOptions) {
+    const params = { ...requestParams, viewRules };
+    try {
+      const responseBody = await epnFetch('/offers/list', {
+        query: params,
+      });
+      const offers = normalizeEpnOfferList(responseBody);
+      return {
+        offers,
+        requestParams: params,
+        responseBody,
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof EpnApiError && error.status === 422 && isViewRulesError(error)) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new EpnApiError('ePN offers viewRules fallback failed', lastError);
 }
 
-export async function searchEpnOffers(query: string, limit = 20): Promise<EpnOffer[]> {
-  if (!query || query.trim().length === 0) {
+export async function getEpnOffers(): Promise<EpnOffersFetchResult> {
+  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', locale: 'ru', limit: 50 });
+}
+
+export async function searchEpnOffers(query: string, limit = 20): Promise<EpnOffersFetchResult> {
+  const trimmed = query?.trim();
+  if (!trimmed) {
     return getEpnOffers();
   }
 
-  const response = await epnFetch('/offers/list', {
-    query: { v: '2', lang: 'ru', viewRules: 1, locale: 'ru', q: query.trim(), limit },
-  });
-  return normalizeEpnOfferList(response);
+  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', locale: 'ru', q: trimmed, limit });
 }
 
 export async function getEpnHotGoods(params: {
