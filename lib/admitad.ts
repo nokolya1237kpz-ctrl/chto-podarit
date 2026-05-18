@@ -54,30 +54,55 @@ export async function getAdmitadAccessToken(): Promise<string> {
 
   const clientId = process.env.ADMITAD_CLIENT_ID;
   const clientSecret = process.env.ADMITAD_CLIENT_SECRET;
+  const admitadScope = process.env.ADMITAD_SCOPE || 'advcampaigns websites deeplink_generator';
+  const tokenUrl = 'https://api.admitad.com/token/';
 
-  if (!clientId || !clientSecret) {
+  const hasClientId = Boolean(clientId);
+  const hasClientSecret = Boolean(clientSecret);
+
+  if (!hasClientId || !hasClientSecret) {
     throw new Error('Missing ADMITAD_CLIENT_ID or ADMITAD_CLIENT_SECRET');
   }
 
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
   try {
-    const response = await fetch('https://api.admitad.com/token/', {
+    const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${basicAuth}`,
       },
       body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
         grant_type: 'client_credentials',
-        scope: 'public',
+        scope: admitadScope,
       }).toString(),
     });
 
-    if (!response.ok) {
-      throw new Error(`Admitad token error: ${response.status} ${response.statusText}`);
+    const responseBody = await response.text();
+    let parsedBody: any = null;
+    try {
+      parsedBody = responseBody ? JSON.parse(responseBody) : null;
+    } catch {
+      parsedBody = responseBody;
     }
 
-    const data: AdmitadTokenResponse = await response.json();
+    console.info('Admitad token request:', {
+      hasClientId,
+      hasClientSecret,
+      clientIdLength: clientId ? clientId.length : 0,
+      secretLength: clientSecret ? clientSecret.length : 0,
+      tokenUrl,
+      status: response.status,
+      scope: admitadScope,
+    });
+
+    if (!response.ok) {
+      const errorDetail = parsedBody?.error_description || parsedBody?.error || response.statusText;
+      throw new Error(`Admitad token error: ${response.status} ${response.statusText} - ${errorDetail}`);
+    }
+
+    const data: AdmitadTokenResponse = typeof parsedBody === 'object' ? parsedBody : JSON.parse(responseBody);
 
     // Cache token, expire it 60 seconds before actual expiration
     tokenCache = {

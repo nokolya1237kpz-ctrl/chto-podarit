@@ -23,6 +23,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
     { href: '/admin/drafts', label: 'Черновики' },
     { href: '/admin/sources', label: 'Источники товаров' },
     { href: '/admin/sync', label: 'Синхронизация' },
+    { href: '/admin/epn', label: 'ePN API' },
     { href: '/admin/quick-add-epn', label: 'Быстро добавить ePN' },
     { href: '/admin/admitad', label: 'Admitad API' },
     { href: '/admin/admitad-import', label: '🌐 Импорт из Admitad' },

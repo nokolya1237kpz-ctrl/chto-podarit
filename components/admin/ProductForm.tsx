@@ -69,6 +69,10 @@ export default function ProductForm({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [checkingImage, setCheckingImage] = useState(false);
   const [fetchingImage, setFetchingImage] = useState(false);
+  const [deeplinkOfferId, setDeeplinkOfferId] = useState('');
+  const [deeplinkPlacementId, setDeeplinkPlacementId] = useState('');
+  const [deeplinkLoading, setDeeplinkLoading] = useState(false);
+  const [deeplinkMessage, setDeeplinkMessage] = useState('');
 
   useEffect(() => {
     setImageStatus('');
@@ -138,6 +142,38 @@ export default function ProductForm({
       setCheckingImage(false);
     };
     img.src = formData.imageUrl;
+  }
+
+  async function generateEpnLink() {
+    if (!formData.originalUrl) {
+      setDeeplinkMessage('Укажите URL товара, чтобы сгенерировать партнёрскую ссылку.');
+      return;
+    }
+
+    setDeeplinkLoading(true);
+    setDeeplinkMessage('Генерация партнерской ссылки...');
+
+    try {
+      const response = await fetch('/api/admin/epn/deeplink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: formData.originalUrl,
+          offerId: deeplinkOfferId || undefined,
+          placementId: deeplinkPlacementId || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось создать deeplink');
+      }
+      setFormData((prev) => ({ ...prev, affiliateUrl: data.affiliateUrl }));
+      setDeeplinkMessage(`Партнёрская ссылка создана. Creative ID: ${data.creativeId || '—'}`);
+    } catch (err) {
+      setDeeplinkMessage(err instanceof Error ? err.message : 'Ошибка создания deeplink');
+    } finally {
+      setDeeplinkLoading(false);
+    }
   }
 
   async function uploadSelectedImage() {
@@ -294,6 +330,33 @@ export default function ProductForm({
                 onChange={(e) => setFormData({ ...formData, affiliateUrl: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
               />
+              <div className="grid gap-4 md:grid-cols-2">
+                <input
+                  type="text"
+                  placeholder="offerId (опционально)"
+                  value={deeplinkOfferId}
+                  onChange={(e) => setDeeplinkOfferId(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
+                />
+                <input
+                  type="text"
+                  placeholder="placementId (опционально)"
+                  value={deeplinkPlacementId}
+                  onChange={(e) => setDeeplinkPlacementId(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-white/30"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={generateEpnLink}
+                disabled={deeplinkLoading || !formData.originalUrl}
+                className="mt-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-semibold text-slate-950 hover:opacity-90 transition disabled:opacity-50"
+              >
+                {deeplinkLoading ? 'Генерация...' : 'Сгенерировать партнёрскую ссылку'}
+              </button>
+              {deeplinkMessage ? (
+                <p className="mt-2 text-sm text-slate-300">{deeplinkMessage}</p>
+              ) : null}
               <p className="text-sm text-white/50">
                 💡 Если указан партнёрский URL, он будет использован вместо основной ссылки
               </p>

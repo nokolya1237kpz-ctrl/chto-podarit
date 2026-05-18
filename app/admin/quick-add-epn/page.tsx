@@ -36,6 +36,10 @@ export default function AdminQuickAddEpnPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [submittedProduct, setSubmittedProduct] = useState<Product | null>(null);
+  const [deeplinkOfferId, setDeeplinkOfferId] = useState('');
+  const [deeplinkPlacementId, setDeeplinkPlacementId] = useState('');
+  const [deeplinkMessage, setDeeplinkMessage] = useState('');
+  const [deeplinkLoading, setDeeplinkLoading] = useState(false);
 
   function updateField(field: keyof QuickAddForm, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -85,6 +89,40 @@ export default function AdminQuickAddEpnPage() {
     }
   }
 
+  async function generateEpnLink() {
+    if (!form.affiliateUrl) {
+      setDeeplinkMessage('Укажите ссылку для генерации партнёрской ссылки.');
+      return;
+    }
+
+    setDeeplinkLoading(true);
+    setDeeplinkMessage('Генерация партнёрской ссылки...');
+
+    try {
+      const response = await fetch('/api/admin/epn/deeplink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: form.affiliateUrl,
+          offerId: deeplinkOfferId || undefined,
+          placementId: deeplinkPlacementId || undefined,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось создать deeplink');
+      }
+
+      updateField('affiliateUrl', data.affiliateUrl);
+      setDeeplinkMessage(`Партнёрская ссылка создана. Creative ID: ${data.creativeId || '—'}`);
+    } catch (error) {
+      setDeeplinkMessage(error instanceof Error ? error.message : 'Ошибка генерации deeplink');
+    } finally {
+      setDeeplinkLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -131,7 +169,7 @@ export default function AdminQuickAddEpnPage() {
           <p className="mt-3 text-sm text-white/60">Введите ссылку и токен, чтобы автоматически получить метаданные ePN. Затем сохраните товар.</p>
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <label className="block space-y-2 text-sm text-white/70">
-              Партнёрская ссылка
+              Ссылка на товар или ePN URL
               <input
                 type="url"
                 value={form.affiliateUrl}
@@ -148,6 +186,33 @@ export default function AdminQuickAddEpnPage() {
               />
             </label>
           </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              placeholder="offerId (опционально)"
+              value={deeplinkOfferId}
+              onChange={(e) => setDeeplinkOfferId(e.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white placeholder-white/40"
+            />
+            <input
+              type="text"
+              placeholder="placementId (опционально)"
+              value={deeplinkPlacementId}
+              onChange={(e) => setDeeplinkPlacementId(e.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white placeholder-white/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={generateEpnLink}
+            disabled={deeplinkLoading || !form.affiliateUrl}
+            className="mt-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-semibold text-slate-950 hover:opacity-90 transition disabled:opacity-50"
+          >
+            {deeplinkLoading ? 'Генерация...' : 'Сгенерировать партнёрскую ссылку'}
+          </button>
+          {deeplinkMessage ? (
+            <p className="mt-2 text-sm text-slate-300">{deeplinkMessage}</p>
+          ) : null}
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <label className="block space-y-2 text-sm text-white/70">
