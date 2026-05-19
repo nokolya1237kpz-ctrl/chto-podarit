@@ -19,12 +19,27 @@ type EpnStatus = {
 type EpnOffer = {
   id: string;
   name: string;
+  image?: string;
   logo?: string;
+  logoSmall?: string;
   status?: string;
   category?: string;
-  commission?: number;
+  commission?: number | string;
+  commissionText?: string;
+  cashbackMaxRate?: string | number;
+  cashbackRateSymbol?: string;
   allowed?: boolean;
   available?: boolean;
+  creativePlacement?: boolean;
+  exportSupport?: boolean;
+  deeplinkSupport?: boolean;
+  marketplace?: string;
+  rating?: string | number;
+  hosts?: string[];
+  cookieLive?: string | number;
+  cr?: string | number;
+  confirm?: string | number;
+  tag?: string | string[];
   directUrl?: string;
 };
 
@@ -58,6 +73,7 @@ export default function EpnAdminPage() {
   const [goodsQuery, setGoodsQuery] = useState('');
   const [goods, setGoods] = useState<EpnGood[]>([]);
   const [goodsLoading, setGoodsLoading] = useState(false);
+  const [importingOfferId, setImportingOfferId] = useState<string | null>(null);
   const [selectedGood, setSelectedGood] = useState<EpnGood | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -167,6 +183,64 @@ export default function EpnAdminPage() {
     }
   };
 
+  const importOfferProducts = async (offer: EpnOffer) => {
+    setError('');
+    setMessage('');
+    setImportingOfferId(offer.id);
+
+    try {
+      const params = new URLSearchParams({
+        offerId: offer.id,
+        limit: '20',
+      });
+      const goodsRes = await fetch(`/api/admin/epn/goods-hot?${params.toString()}`);
+      const goodsData = await goodsRes.json();
+      if (!goodsRes.ok || !goodsData.success) {
+        throw new Error(goodsData.error || 'Не удалось получить товары оффера');
+      }
+
+      const offerGoods: EpnGood[] = goodsData.goods || [];
+      if (offerGoods.length === 0) {
+        setMessage('Для этого оффера товары не найдены');
+        return;
+      }
+
+      let importedCount = 0;
+      for (const good of offerGoods) {
+        const importRes = await fetch('/api/admin/epn/import-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            good,
+            recipients: [],
+            interests: [],
+            occasions: [],
+            giftTypes: [],
+            tags: [offer.marketplace || 'epn', offer.category || 'Без категории'],
+          }),
+        });
+        const importData = await importRes.json();
+        if (importRes.ok && importData.success) {
+          importedCount += 1;
+        }
+      }
+
+      setGoods(offerGoods);
+      setMessage(`Импортировано ${importedCount} из ${offerGoods.length} товаров оффера`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка импорта товаров оффера');
+    } finally {
+      setImportingOfferId(null);
+    }
+  };
+
+  const getOfferUrl = (offer: EpnOffer) => {
+    if (offer.directUrl) return offer.directUrl;
+    const host = offer.hosts?.[0];
+    if (!host) return '';
+    return host.startsWith('http') ? host : `https://${host}`;
+  };
+
   return (
     <AdminShell title="ePN API">
       <div className="space-y-6">
@@ -254,22 +328,74 @@ export default function EpnAdminPage() {
           ) : (
             <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
               {offers.map((offer) => (
-                <div key={offer.id} className="rounded-3xl border border-white/10 bg-slate-950/80 p-4">
-                  <div className="flex items-center gap-3">
-                    {offer.logo ? (
-                      <img src={offer.logo} alt={offer.name} className="h-14 w-14 rounded-2xl object-cover" />
+                <div key={offer.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80">
+                  <div className="relative h-36 bg-slate-900/70">
+                    {offer.image ? (
+                      <img src={offer.image} alt={offer.name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-sm text-slate-400">No</div>
+                      <div className="flex h-full items-center justify-center text-sm text-slate-500">Нет изображения</div>
                     )}
-                    <div>
-                      <h4 className="text-sm font-semibold text-white">{offer.name}</h4>
-                      <p className="text-xs text-slate-400">{offer.category || 'Категория не указана'}</p>
+                    <div className="absolute left-4 top-4 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950">
+                      {offer.commissionText || offer.commission || 'Комиссия не указана'}
+                    </div>
+                    <div className="absolute bottom-3 left-4 flex items-center gap-2">
+                      {offer.logo || offer.logoSmall ? (
+                        <img src={offer.logo || offer.logoSmall} alt={`${offer.name} logo`} className="h-12 w-12 rounded-2xl border border-white/20 bg-slate-950 object-contain p-1" />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-xs text-slate-500">Logo</div>
+                      )}
+                      <span className="rounded-full border border-white/10 bg-slate-950/90 px-3 py-1 text-xs font-semibold text-white">
+                        {offer.marketplace || 'other'}
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-2 text-sm text-slate-300">
-                    <div>Статус: {offer.status || '—'}</div>
-                    <div>Комиссия: {offer.commission ?? '—'}</div>
-                    <div>Доступен: {offer.available ? 'Да' : 'Нет'}</div>
+                  <div className="p-4">
+                    <div className="min-h-20">
+                      <h4 className="text-sm font-semibold text-white line-clamp-2">{offer.name}</h4>
+                      <p className="mt-1 text-xs text-slate-400">{offer.category || 'Без категории'}</p>
+                      <p className="mt-1 text-xs text-slate-500">Offer ID: {offer.id}</p>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300">
+                      <InfoCell label="Рейтинг" value={offer.rating ?? '—'} />
+                      <InfoCell label="Cookie" value={offer.cookieLive ?? '—'} />
+                      <InfoCell label="CR" value={offer.cr ?? '—'} />
+                      <InfoCell label="Confirm" value={offer.confirm ?? '—'} />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <StatusPill label="Creative" active={Boolean(offer.creativePlacement)} />
+                      <StatusPill label="Export" active={Boolean(offer.exportSupport)} />
+                      <StatusPill label="Deeplink" active={Boolean(offer.deeplinkSupport)} />
+                      <StatusPill label="Доступен" active={Boolean(offer.available)} />
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-xs text-slate-400">
+                      <div>Статус экспорта: {offer.exportSupport ? 'Да' : 'Нет'}</div>
+                      <div>Creative support: {offer.creativePlacement ? 'Да' : 'Нет'}</div>
+                      <div>Available deeplink support: {offer.deeplinkSupport ? 'Да' : 'Нет'}</div>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                      {getOfferUrl(offer) ? (
+                        <a
+                          href={getOfferUrl(offer)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
+                        >
+                          Открыть оффер
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => importOfferProducts(offer)}
+                        disabled={importingOfferId === offer.id}
+                        className="rounded-full bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+                      >
+                        {importingOfferId === offer.id ? 'Импорт...' : 'Импортировать товары'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -355,5 +481,22 @@ function StatusRow({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{label}</p>
       <p className="mt-3 text-sm font-semibold text-white">{value}</p>
     </div>
+  );
+}
+
+function InfoCell({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{label}</div>
+      <div className="mt-1 font-semibold text-white">{value}</div>
+    </div>
+  );
+}
+
+function StatusPill({ label, active }: { label: string; active: boolean }) {
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/5 text-slate-400'}`}>
+      {label}: {active ? 'Да' : 'Нет'}
+    </span>
   );
 }

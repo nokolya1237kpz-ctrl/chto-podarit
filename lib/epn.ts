@@ -25,12 +25,27 @@ export interface EpnStatusResult {
 export interface EpnOffer {
   id: string;
   name: string;
+  image?: string;
   logo?: string;
+  logoSmall?: string;
   status?: string;
   category?: string;
-  commission?: number;
+  commission?: number | string;
+  commissionText?: string;
+  cashbackMaxRate?: string | number;
+  cashbackRateSymbol?: string;
   allowed?: boolean;
   available?: boolean;
+  creativePlacement?: boolean;
+  exportSupport?: boolean;
+  deeplinkSupport?: boolean;
+  marketplace?: string;
+  rating?: string | number;
+  hosts?: string[];
+  cookieLive?: string | number;
+  cr?: string | number;
+  confirm?: string | number;
+  tag?: string | string[];
   directUrl?: string;
 }
 
@@ -328,14 +343,14 @@ export function mapEpnGoodToProduct(good: any) {
   const title = good.name || good.title || good.product_name || 'ePN товар';
   const price = Number(good.price || good.price_total || good.sale_price || 0) || 0;
   const currency = good.currency || good.currency_code || 'RUB';
-  const image = good.image || good.logo || good.images?.[0] || good.photo || '';
-  const directUrl = good.direct_url || good.url || good.link || good.original_link || '';
-  const affiliateUrl = good.affiliate_url || good.deeplink || directUrl || '';
-  const offerId = String(good.offer_id || good.offer?.id || good.offer_id || good.advertiser_id || '');
+  const image = good.imageUrl || good.image || good.logo || good.images?.[0] || good.photo || '';
+  const directUrl = good.directUrl || good.originalUrl || good.direct_url || good.url || good.link || good.original_link || '';
+  const affiliateUrl = good.affiliateUrl || good.affiliate_url || good.deeplink || directUrl || '';
+  const offerId = String(good.offerId || good.offer_id || good.offer?.id || good.advertiser_id || '');
   const category = good.category || good.category_name || good.offer?.category?.name || '';
   const cashback = Number(good.cashback || good.commission || 0) || 0;
-  const cashbackPercent = Number(good.cashback_percent || good.commission_percent || 0) || 0;
-  const offerStatus = good.status || good.offer?.status || '';
+  const cashbackPercent = Number(good.cashbackPercent || good.cashback_percent || good.commission_percent || 0) || 0;
+  const offerStatus = good.offerStatus || good.status || good.offer?.status || '';
 
   return {
     title,
@@ -350,8 +365,8 @@ export function mapEpnGoodToProduct(good: any) {
     category,
     offerId,
     id: String(good.id || good.good_id || good.affiliate_id || ''),
-    externalProductId: String(good.id || good.good_id || good.affiliate_id || ''),
-    marketplace: detectMarketplaceFromUrl(directUrl),
+    externalProductId: String(good.externalProductId || good.id || good.good_id || good.affiliate_id || ''),
+    marketplace: good.marketplace || detectMarketplaceFromUrl(directUrl),
     offerStatus,
     status: good.status || '',
   };
@@ -477,16 +492,92 @@ export function detectMarketplaceFromUrl(url?: string) {
   return 'other';
 }
 
+function toBoolean(value: any) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'да';
+  }
+  return false;
+}
+
+function firstArrayValue(value: any) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const first = value[0];
+  if (typeof first === 'string' || typeof first === 'number') {
+    return String(first);
+  }
+  if (first && typeof first === 'object') {
+    return first.value || first.rate || first.name || first.title || JSON.stringify(first);
+  }
+  return undefined;
+}
+
+function normalizeStringArray(value: any): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function detectMarketplaceFromOffer(offer: any) {
+  const tags = normalizeStringArray(offer.tag || offer.tags || offer.attributes?.tag || offer.attributes?.tags)
+    .join(' ')
+    .toLowerCase();
+  const hosts = normalizeStringArray(offer.hosts || offer.host || offer.attributes?.hosts || offer.attributes?.host)
+    .join(' ')
+    .toLowerCase();
+
+  if (tags.includes('ali')) return 'aliexpress';
+  if (hosts.includes('ozon')) return 'ozon';
+  if (hosts.includes('wildberries')) return 'wildberries';
+  return 'other';
+}
+
 function normalizeEpnOffer(offer: any): EpnOffer {
+  const labelNames = normalizeStringArray(offer.labelNames || offer.label_names || offer.attributes?.labelNames || offer.attributes?.label_names);
+  const cashbackMaxRate = offer.cashbackMaxRate ?? offer.cashback_max_rate ?? offer.attributes?.cashbackMaxRate ?? offer.attributes?.cashback_max_rate;
+  const cashbackRateSymbol = offer.cashbackRateSymbol || offer.cashback_rate_symbol || offer.attributes?.cashbackRateSymbol || offer.attributes?.cashback_rate_symbol || '';
+  const firstComission = firstArrayValue(offer.comission || offer.commission || offer.attributes?.comission || offer.attributes?.commission);
+  const commissionText = cashbackMaxRate !== undefined && cashbackMaxRate !== null && cashbackMaxRate !== ''
+    ? `${cashbackMaxRate}${cashbackRateSymbol}`
+    : firstComission;
+  const creativePlacement = toBoolean(offer.creative_placement ?? offer.creativePlacement ?? offer.attributes?.creative_placement ?? offer.attributes?.creativePlacement);
+  const exportSupport = toBoolean(offer.export ?? offer.exportSupport ?? offer.attributes?.export ?? offer.attributes?.exportSupport);
+  const image = offer.image || offer.logo || offer.logo_small || offer.attributes?.image || offer.attributes?.logo || offer.attributes?.logo_small;
+  const hosts = normalizeStringArray(offer.hosts || offer.host || offer.attributes?.hosts || offer.attributes?.host);
+
   return {
     id: String(offer.id || offer.offer_id || offer.attributes?.id || ''),
     name: offer.name || offer.title || offer.attributes?.name || 'ePN оффер',
-    logo: offer.logo || offer.image || offer.attributes?.logo || offer.attributes?.image,
+    image,
+    logo: offer.logo || offer.attributes?.logo,
+    logoSmall: offer.logo_small || offer.logoSmall || offer.attributes?.logo_small || offer.attributes?.logoSmall,
     status: offer.status || offer.attributes?.status || offer.offer_state,
-    category: offer.category || offer.category_name || offer.attributes?.category || offer.offer_category,
-    commission: Number(offer.commission || offer.commission_rate || offer.attributes?.commission || 0) || 0,
+    category: labelNames[0] || offer.category || offer.category_name || offer.attributes?.category || offer.offer_category || 'Без категории',
+    commission: commissionText ?? (Number(offer.commission || offer.commission_rate || offer.attributes?.commission || 0) || 0),
+    commissionText,
+    cashbackMaxRate,
+    cashbackRateSymbol,
     allowed: offer.allowed ?? offer.is_allowed ?? offer.attributes?.allowed,
-    available: offer.available ?? offer.is_available ?? offer.attributes?.available,
+    available: creativePlacement || exportSupport,
+    creativePlacement,
+    exportSupport,
+    deeplinkSupport: creativePlacement,
+    marketplace: detectMarketplaceFromOffer(offer),
+    rating: offer.rating ?? offer.attributes?.rating,
+    hosts,
+    cookieLive: offer.cookieLive ?? offer.cookie_live ?? offer.attributes?.cookieLive ?? offer.attributes?.cookie_live,
+    cr: offer.cr ?? offer.attributes?.cr,
+    confirm: offer.confirm ?? offer.attributes?.confirm,
+    tag: offer.tag || offer.tags || offer.attributes?.tag || offer.attributes?.tags,
     directUrl: offer.url || offer.link || offer.attributes?.url,
   };
 }

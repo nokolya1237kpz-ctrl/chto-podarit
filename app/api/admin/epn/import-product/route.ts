@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       imageUrl: productData.imageUrl,
       originalUrl: productData.originalUrl,
       affiliateUrl: affiliateUrl || productData.originalUrl,
-      marketplace: detectMarketplaceFromUrl(productData.originalUrl),
+      marketplace: productData.marketplace || detectMarketplaceFromUrl(productData.originalUrl),
       externalProductId: productData.externalProductId || productData.id,
       sourceProvider: 'epn' as const,
       sourceType: 'epn' as const,
