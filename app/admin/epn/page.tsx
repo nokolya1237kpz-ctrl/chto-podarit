@@ -41,6 +41,7 @@ type EpnOffer = {
   confirm?: string | number;
   tag?: string | string[];
   directUrl?: string;
+  epnUrl?: string;
 };
 
 type EpnGood = {
@@ -60,6 +61,20 @@ type EpnGood = {
   offerStatus?: string;
 };
 
+type EpnCreative = {
+  id: string;
+  title: string;
+  originalUrl: string;
+  affiliateUrl: string;
+  deeplinkUrl: string;
+  token: string;
+  offerName?: string;
+  offerId?: string;
+  marketplace: string;
+  createdAt?: string;
+  type?: string;
+};
+
 type OfferActionState = {
   loadingImport?: boolean;
   importError?: string;
@@ -71,6 +86,12 @@ type OfferActionState = {
   inputUrl?: string;
   debug?: any;
   debugOpen?: boolean;
+};
+
+type CreativeActionState = {
+  loading?: boolean;
+  error?: string;
+  message?: string;
 };
 
 export default function EpnAdminPage() {
@@ -88,6 +109,11 @@ export default function EpnAdminPage() {
   const [goods, setGoods] = useState<EpnGood[]>([]);
   const [goodsLoading, setGoodsLoading] = useState(false);
   const [offerActions, setOfferActions] = useState<Record<string, OfferActionState>>({});
+  const [creatives, setCreatives] = useState<EpnCreative[]>([]);
+  const [creativesLoading, setCreativesLoading] = useState(false);
+  const [creativeActions, setCreativeActions] = useState<Record<string, CreativeActionState>>({});
+  const [creativesMessage, setCreativesMessage] = useState('');
+  const [creativesError, setCreativesError] = useState('');
   const [selectedGood, setSelectedGood] = useState<EpnGood | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -198,6 +224,84 @@ export default function EpnAdminPage() {
     }
   };
 
+  const loadCreatives = async () => {
+    setCreativesLoading(true);
+    setCreativesError('');
+    setCreativesMessage('');
+
+    try {
+      const res = await fetch('/api/admin/epn/creatives?limit=100');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось загрузить креативы');
+      }
+      setCreatives(data.creatives || []);
+      setCreativesMessage(`Загружено ${data.count || 0} креативов`);
+    } catch (err) {
+      setCreativesError(err instanceof Error ? err.message : 'Ошибка загрузки креативов');
+    } finally {
+      setCreativesLoading(false);
+    }
+  };
+
+  const importCreative = async (creative: EpnCreative) => {
+    updateCreativeAction(creative.id, { loading: true, error: '', message: '' });
+
+    try {
+      const res = await fetch('/api/admin/epn/import-creative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creative }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось импортировать креатив');
+      }
+      updateCreativeAction(creative.id, {
+        message: data.metadataFound ? 'Товар импортирован' : 'Товар импортирован как черновик',
+      });
+    } catch (err) {
+      updateCreativeAction(creative.id, {
+        error: err instanceof Error ? err.message : 'Ошибка импорта креатива',
+      });
+    } finally {
+      updateCreativeAction(creative.id, { loading: false });
+    }
+  };
+
+  const importAllCreatives = async () => {
+    setCreativesError('');
+    setCreativesMessage('');
+    let importedCount = 0;
+
+    for (const creative of creatives) {
+      updateCreativeAction(creative.id, { loading: true, error: '', message: '' });
+      try {
+        const res = await fetch('/api/admin/epn/import-creative', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creative }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Не удалось импортировать креатив');
+        }
+        importedCount += 1;
+        updateCreativeAction(creative.id, {
+          loading: false,
+          message: data.metadataFound ? 'Товар импортирован' : 'Товар импортирован как черновик',
+        });
+      } catch (err) {
+        updateCreativeAction(creative.id, {
+          loading: false,
+          error: err instanceof Error ? err.message : 'Ошибка импорта креатива',
+        });
+      }
+    }
+
+    setCreativesMessage(`Импортировано ${importedCount} из ${creatives.length} креативов`);
+  };
+
   const importOfferProducts = async (offer: EpnOffer) => {
     updateOfferAction(offer.id, {
       loadingImport: true,
@@ -285,7 +389,13 @@ export default function EpnAdminPage() {
     if (offer.directUrl) return offer.directUrl;
     const host = offer.hosts?.[0];
     if (!host) return '';
-    return host.startsWith('http') ? host : `https://${host}`;
+    const trimmed = host.trim();
+    if (!trimmed || trimmed.startsWith('/') || !trimmed.includes('.')) return '';
+    return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+  };
+
+  const getEpnOfferUrl = (offer: EpnOffer) => {
+    return offer.epnUrl || (offer.id ? `https://app.epn.bz/offers/${offer.id}` : '');
   };
 
   const createOfferDeeplink = async (offer: EpnOffer) => {
@@ -367,6 +477,16 @@ export default function EpnAdminPage() {
       ...current,
       [offerId]: {
         ...current[offerId],
+        ...updates,
+      },
+    }));
+  };
+
+  const updateCreativeAction = (creativeId: string, updates: CreativeActionState) => {
+    setCreativeActions((current) => ({
+      ...current,
+      [creativeId]: {
+        ...current[creativeId],
         ...updates,
       },
     }));
@@ -523,18 +643,24 @@ export default function EpnAdminPage() {
                       </details>
                     ) : null}
 
-                    <div className="mt-auto grid grid-cols-3 gap-2 pt-4">
+                    <div className="mt-auto grid grid-cols-2 gap-2 pt-4 sm:grid-cols-4">
                       {getOfferUrl(offer) ? (
                         <a
                           href={getOfferUrl(offer)}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-white/10"
                         >
                           Открыть оффер
                         </a>
                       ) : (
-                        <span className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-slate-500">Открыть оффер</span>
+                        <button
+                          type="button"
+                          disabled
+                          className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-slate-500"
+                        >
+                          Открыть оффер
+                        </button>
                       )}
                       <button
                         type="button"
@@ -552,6 +678,24 @@ export default function EpnAdminPage() {
                       >
                         {action.loadingDeeplink ? '...' : 'Deeplink'}
                       </button>
+                      {getEpnOfferUrl(offer) ? (
+                        <a
+                          href={getEpnOfferUrl(offer)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-white/10"
+                        >
+                          Открыть в ePN
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-slate-500"
+                        >
+                          Открыть в ePN
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -586,6 +730,85 @@ export default function EpnAdminPage() {
               </div>
             </details>
           ) : null}
+        </section>
+
+        <section className="glass rounded-3xl p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-slate-400">Deeplink-креативы</p>
+              <h3 className="text-xl font-semibold text-white">Мои креативы ePN</h3>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={loadCreatives}
+                disabled={creativesLoading}
+                className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:opacity-90 disabled:opacity-50"
+              >
+                {creativesLoading ? 'Загрузка...' : 'Загрузить мои креативы'}
+              </button>
+              <button
+                type="button"
+                onClick={importAllCreatives}
+                disabled={creatives.length === 0 || Object.values(creativeActions).some((action) => action.loading)}
+                className="rounded-full bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+              >
+                Импортировать все
+              </button>
+            </div>
+          </div>
+
+          {creativesMessage ? (
+            <div className="mt-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">{creativesMessage}</div>
+          ) : null}
+          {creativesError ? (
+            <div className="mt-4 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">{creativesError}</div>
+          ) : null}
+
+          {creatives.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-dashed border-white/10 p-6 text-center text-slate-400">Креативы появятся после загрузки</div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
+              {creatives.map((creative) => {
+                const action = creativeActions[creative.id] || {};
+                return (
+                  <div key={creative.id} className="flex w-full max-w-[520px] flex-col justify-self-center rounded-3xl border border-white/10 bg-slate-950/80 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{creative.marketplace || 'other'}</span>
+                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300">{creative.type || 'deeplink'}</span>
+                    </div>
+                    <h4 className="mt-3 text-sm font-semibold text-white line-clamp-2">{creative.title || 'ePN creative'}</h4>
+                    <div className="mt-3 grid gap-2 text-xs text-slate-400">
+                      <div>Token: <span className="text-slate-200">{creative.token || '—'}</span></div>
+                      <div>Offer: <span className="text-slate-200">{creative.offerName || creative.offerId || '—'}</span></div>
+                      <div>Created: <span className="text-slate-200">{creative.createdAt || '—'}</span></div>
+                    </div>
+                    <div className="mt-3 space-y-2 text-xs">
+                      <a href={creative.originalUrl} target="_blank" rel="noreferrer" className="block break-all rounded-2xl border border-white/10 bg-white/5 p-3 text-slate-200 hover:bg-white/10">
+                        {creative.originalUrl || 'Нет original URL'}
+                      </a>
+                      <a href={creative.affiliateUrl || creative.deeplinkUrl} target="_blank" rel="noreferrer" className="block break-all rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-100 hover:bg-cyan-400/20">
+                        {creative.affiliateUrl || creative.deeplinkUrl || 'Нет deeplink URL'}
+                      </a>
+                    </div>
+                    {(action.error || action.message) ? (
+                      <div className={`mt-3 rounded-2xl border p-3 text-xs ${action.error ? 'border-red-500/20 bg-red-500/10 text-red-200' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'}`}>
+                        {action.error || action.message}
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => importCreative(creative)}
+                      disabled={Boolean(action.loading)}
+                      className="mt-auto rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+                    >
+                      {action.loading ? 'Импорт...' : 'Импортировать товар'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="glass rounded-3xl p-6">

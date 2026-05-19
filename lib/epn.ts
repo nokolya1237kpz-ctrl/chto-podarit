@@ -47,6 +47,7 @@ export interface EpnOffer {
   confirm?: string | number;
   tag?: string | string[];
   directUrl?: string;
+  epnUrl?: string;
 }
 
 export interface EpnGood {
@@ -65,6 +66,20 @@ export interface EpnGood {
   marketplace?: string;
   offerStatus?: string;
   status?: string;
+}
+
+export interface EpnCreative {
+  id: string;
+  title: string;
+  originalUrl: string;
+  affiliateUrl: string;
+  deeplinkUrl: string;
+  token: string;
+  offerName?: string;
+  offerId?: string;
+  marketplace: string;
+  createdAt?: string;
+  type?: string;
 }
 
 class EpnApiError extends Error {
@@ -344,6 +359,27 @@ export async function getEpnHotGoods(params: {
   return normalizeEpnGoodsList(response);
 }
 
+export async function getEpnCreatives(params: {
+  limit?: number;
+  offset?: number;
+  offerId?: string;
+  description?: string;
+} = {}): Promise<EpnCreative[]> {
+  const response = await epnFetch('/creatives/deeplinks', {
+    query: {
+      fields: 'id,user_id,link,status,type,offer_type,offer_id,code,description,hash,created_at,erid',
+      statuses: 'new,working',
+      limit: params.limit ?? 100,
+      offset: params.offset ?? 0,
+      offerId: params.offerId,
+      description: params.description,
+      sort: '-id',
+    },
+  });
+
+  return normalizeEpnCreativesList(response);
+}
+
 export function mapEpnGoodToProduct(good: any) {
   const title = good.name || good.title || good.product_name || 'ePN товар';
   const price = Number(good.price || good.price_total || good.sale_price || 0) || 0;
@@ -503,6 +539,18 @@ export function detectMarketplaceFromUrl(url?: string) {
   return 'other';
 }
 
+export function detectMarketplaceFromProductUrl(url?: string) {
+  if (!url) {
+    return 'other';
+  }
+
+  const normalized = url.toLowerCase();
+  if (normalized.includes('ozon.ru')) return 'ozon';
+  if (normalized.includes('wildberries.ru') || normalized.includes('wb.ru')) return 'wildberries';
+  if (normalized.includes('aliexpress')) return 'aliexpress';
+  return detectMarketplaceFromUrl(url);
+}
+
 function toBoolean(value: any) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value === 1;
@@ -538,6 +586,17 @@ function normalizeStringArray(value: any): string[] {
   return [];
 }
 
+function normalizeExternalUrl(value?: string) {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith('/')) return undefined;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('.') && !trimmed.includes(' ')) {
+    return `https://${trimmed}`;
+  }
+  return undefined;
+}
+
 function detectMarketplaceFromOffer(offer: any) {
   const tags = normalizeStringArray(offer.tag || offer.tags || offer.attributes?.tag || offer.attributes?.tags)
     .join(' ')
@@ -564,9 +623,20 @@ function normalizeEpnOffer(offer: any): EpnOffer {
   const exportSupport = toBoolean(offer.export ?? offer.exportSupport ?? offer.attributes?.export ?? offer.attributes?.exportSupport);
   const image = offer.image || offer.logo || offer.logo_small || offer.attributes?.image || offer.attributes?.logo || offer.attributes?.logo_small;
   const hosts = normalizeStringArray(offer.hosts || offer.host || offer.attributes?.hosts || offer.attributes?.host);
+  const directUrl = normalizeExternalUrl(
+    offer.link_default ||
+    offer.linkDefault ||
+    offer.attributes?.link_default ||
+    offer.attributes?.linkDefault ||
+    offer.url ||
+    offer.link ||
+    offer.attributes?.url ||
+    hosts[0]
+  );
+  const offerId = String(offer.id || offer.offer_id || offer.attributes?.id || '');
 
   return {
-    id: String(offer.id || offer.offer_id || offer.attributes?.id || ''),
+    id: offerId,
     name: offer.name || offer.title || offer.attributes?.name || 'ePN оффер',
     image,
     logo: offer.logo || offer.attributes?.logo,
@@ -589,7 +659,8 @@ function normalizeEpnOffer(offer: any): EpnOffer {
     cr: offer.cr ?? offer.attributes?.cr,
     confirm: offer.confirm ?? offer.attributes?.confirm,
     tag: offer.tag || offer.tags || offer.attributes?.tag || offer.attributes?.tags,
-    directUrl: offer.url || offer.link || offer.attributes?.url,
+    directUrl,
+    epnUrl: offerId ? `https://app.epn.bz/offers/${offerId}` : undefined,
   };
 }
 
@@ -628,6 +699,45 @@ function normalizeEpnGoodsList(response: any): EpnGood[] {
     return [];
   }
   return items.map(normalizeEpnGood);
+}
+
+function extractEpnToken(value?: string) {
+  if (!value) return '';
+  const match = value.match(/\/o\/([a-zA-Z0-9]+)/) || value.match(/[?&](?:hash|token|deepLink)=([a-zA-Z0-9]+)/);
+  return match?.[1] || '';
+}
+
+function normalizeEpnCreative(item: any): EpnCreative {
+  const attributes = item?.attributes || item || {};
+  const originalUrl = attributes.link || attributes.url || attributes.originalUrl || '';
+  const affiliateUrl = attributes.code || attributes.deeplink || attributes.deeplinkUrl || attributes.affiliateUrl || '';
+  const token = attributes.hash || attributes.token || extractEpnToken(affiliateUrl);
+  const title = attributes.description || attributes.name || attributes.title || `ePN creative ${item?.id || token || ''}`.trim();
+  const offerId = attributes.offer_id ?? attributes.offerId;
+  const offerName = attributes.offer_type || attributes.offerName || attributes.offer_name;
+
+  return {
+    id: String(item?.id || attributes.id || token || originalUrl || affiliateUrl),
+    title,
+    originalUrl,
+    affiliateUrl,
+    deeplinkUrl: affiliateUrl,
+    token: String(token || item?.id || attributes.id || ''),
+    offerName,
+    offerId: offerId !== undefined && offerId !== null ? String(offerId) : undefined,
+    marketplace: detectMarketplaceFromProductUrl(originalUrl),
+    createdAt: attributes.created_at || attributes.createdAt,
+    type: attributes.type || item?.type || 'deeplink',
+  };
+}
+
+function normalizeEpnCreativesList(response: any): EpnCreative[] {
+  const items = response?.data?.items || response?.data || response?.items || response?.creatives || [];
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map(normalizeEpnCreative).filter((creative) => creative.originalUrl || creative.affiliateUrl);
 }
 
 export async function fetchEpnProductMetadata(
