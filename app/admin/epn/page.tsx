@@ -70,10 +70,12 @@ export default function EpnAdminPage() {
   const [requestUrl, setRequestUrl] = useState('');
   const [requestParams, setRequestParams] = useState<Record<string, any> | null>(null);
   const [responseBody, setResponseBody] = useState<any>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
   const [goodsQuery, setGoodsQuery] = useState('');
   const [goods, setGoods] = useState<EpnGood[]>([]);
   const [goodsLoading, setGoodsLoading] = useState(false);
   const [importingOfferId, setImportingOfferId] = useState<string | null>(null);
+  const [deeplinkingOfferId, setDeeplinkingOfferId] = useState<string | null>(null);
   const [selectedGood, setSelectedGood] = useState<EpnGood | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -116,6 +118,7 @@ export default function EpnAdminPage() {
       setRequestUrl(data.debug?.requestUrl || res.url);
       setRequestParams(data.debug?.requestParams || { q: offerQuery.trim(), limit: 20 });
       setResponseBody(data.debug || data);
+      setDebugOpen(false);
 
       if (!res.ok) {
         const errorMessage = data.error || 'Ошибка поиска офферов';
@@ -241,6 +244,41 @@ export default function EpnAdminPage() {
     return host.startsWith('http') ? host : `https://${host}`;
   };
 
+  const createOfferDeeplink = async (offer: EpnOffer) => {
+    const url = getOfferUrl(offer);
+    if (!url) {
+      setError('У оффера нет ссылки для deeplink');
+      return;
+    }
+
+    setError('');
+    setMessage('');
+    setDeeplinkingOfferId(offer.id);
+
+    try {
+      const res = await fetch('/api/admin/epn/deeplink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          offerId: offer.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось создать deeplink');
+      }
+      setMessage('Deeplink создан');
+      if (data.affiliateUrl) {
+        window.open(data.affiliateUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка создания deeplink');
+    } finally {
+      setDeeplinkingOfferId(null);
+    }
+  };
+
   return (
     <AdminShell title="ePN API">
       <div className="space-y-6">
@@ -303,54 +341,34 @@ export default function EpnAdminPage() {
             </div>
             <span className="text-xs uppercase tracking-[0.3em] text-white/40">{offers.length} офферов</span>
           </div>
-          {requestUrl ? (
-            <div className="mt-4 space-y-3 rounded-3xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-200">
-              <div>
-                <div className="font-semibold text-slate-100">Request URL</div>
-                <div className="break-all text-slate-300">{requestUrl}</div>
-              </div>
-              <div>
-                <div className="font-semibold text-slate-100">Request params</div>
-                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
-                  {JSON.stringify(requestParams, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <div className="font-semibold text-slate-100">Response body</div>
-                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
-                  {JSON.stringify(responseBody, null, 2)}
-                </pre>
-              </div>
-            </div>
-          ) : null}
           {offers.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 p-6 text-center text-slate-400">Результаты появятся после поиска</div>
+            <div className="mt-6 rounded-3xl border border-dashed border-white/10 p-6 text-center text-slate-400">Результаты появятся после поиска</div>
           ) : (
-            <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
               {offers.map((offer) => (
-                <div key={offer.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80">
-                  <div className="relative h-36 bg-slate-900/70">
+                <div key={offer.id} className="flex w-full max-w-[520px] flex-col justify-self-center overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80">
+                  <div className="relative h-32 bg-slate-900/70">
                     {offer.image ? (
-                      <img src={offer.image} alt={offer.name} className="h-full w-full object-cover" />
+                      <img src={offer.image} alt={offer.name} className="h-full w-full object-contain p-3" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-slate-500">Нет изображения</div>
                     )}
-                    <div className="absolute left-4 top-4 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950">
+                    <div className="absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950">
                       {offer.commissionText || offer.commission || 'Комиссия не указана'}
                     </div>
-                    <div className="absolute bottom-3 left-4 flex items-center gap-2">
+                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
                       {offer.logo || offer.logoSmall ? (
-                        <img src={offer.logo || offer.logoSmall} alt={`${offer.name} logo`} className="h-12 w-12 rounded-2xl border border-white/20 bg-slate-950 object-contain p-1" />
+                        <img src={offer.logo || offer.logoSmall} alt={`${offer.name} logo`} className="h-10 w-10 shrink-0 rounded-2xl border border-white/20 bg-slate-950 object-contain p-1" />
                       ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-xs text-slate-500">Logo</div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-xs text-slate-500">Logo</div>
                       )}
                       <span className="rounded-full border border-white/10 bg-slate-950/90 px-3 py-1 text-xs font-semibold text-white">
                         {offer.marketplace || 'other'}
                       </span>
                     </div>
                   </div>
-                  <div className="p-4">
-                    <div className="min-h-20">
+                  <div className="flex flex-1 flex-col p-4">
+                    <div>
                       <h4 className="text-sm font-semibold text-white line-clamp-2">{offer.name}</h4>
                       <p className="mt-1 text-xs text-slate-400">{offer.category || 'Без категории'}</p>
                       <p className="mt-1 text-xs text-slate-500">Offer ID: {offer.id}</p>
@@ -370,30 +388,40 @@ export default function EpnAdminPage() {
                       <StatusPill label="Доступен" active={Boolean(offer.available)} />
                     </div>
 
-                    <div className="mt-4 grid gap-2 text-xs text-slate-400">
+                    <div className="mt-3 grid gap-1 text-xs text-slate-400">
                       <div>Статус экспорта: {offer.exportSupport ? 'Да' : 'Нет'}</div>
                       <div>Creative support: {offer.creativePlacement ? 'Да' : 'Нет'}</div>
                       <div>Available deeplink support: {offer.deeplinkSupport ? 'Да' : 'Нет'}</div>
                     </div>
 
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="mt-auto grid grid-cols-3 gap-2 pt-4">
                       {getOfferUrl(offer) ? (
                         <a
                           href={getOfferUrl(offer)}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
+                          className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-white/10"
                         >
                           Открыть оффер
                         </a>
-                      ) : null}
+                      ) : (
+                        <span className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-slate-500">Открыть оффер</span>
+                      )}
                       <button
                         type="button"
                         onClick={() => importOfferProducts(offer)}
                         disabled={importingOfferId === offer.id}
-                        className="rounded-full bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+                        className="rounded-2xl bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
                       >
-                        {importingOfferId === offer.id ? 'Импорт...' : 'Импортировать товары'}
+                        {importingOfferId === offer.id ? 'Импорт...' : 'Импортировать'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => createOfferDeeplink(offer)}
+                        disabled={!getOfferUrl(offer) || deeplinkingOfferId === offer.id}
+                        className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                      >
+                        {deeplinkingOfferId === offer.id ? '...' : 'Deeplink'}
                       </button>
                     </div>
                   </div>
@@ -401,6 +429,33 @@ export default function EpnAdminPage() {
               ))}
             </div>
           )}
+          {requestUrl ? (
+            <details
+              open={debugOpen}
+              onToggle={(event) => setDebugOpen(event.currentTarget.open)}
+              className="mt-6 rounded-3xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-200"
+            >
+              <summary className="cursor-pointer select-none font-semibold text-slate-100">Debug API Response</summary>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-slate-100">Request URL</div>
+                  <div className="break-all text-slate-300">{requestUrl}</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-100">Request params</div>
+                  <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
+                    {JSON.stringify(requestParams, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-100">Response body</div>
+                  <pre className="mt-2 max-h-[400px] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
+                    {JSON.stringify(responseBody, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </details>
+          ) : null}
         </section>
 
         <section className="glass rounded-3xl p-6">
