@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Analytics from '../components/Analytics';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'ЧтоПодарить — подбор подарка за 30 секунд',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <Analytics />
         {children}
+        <VercelAnalytics />
       </body>
     </html>
   );
