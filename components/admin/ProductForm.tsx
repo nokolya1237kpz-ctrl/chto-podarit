@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Product } from '@/types/product';
 import SafeProductImage from '@/components/SafeProductImage';
 import { MARKETPLACE_OPTIONS } from '@/lib/marketplaces';
+import { autoFillProductFields } from '@/lib/productAutoFill';
 
 interface ProductFormProps {
   productId?: string;
@@ -109,6 +110,21 @@ export default function ProductForm({
   function handleArrayInput(field: string, value: string) {
     const values = value.split(',').map((v) => v.trim()).filter(Boolean);
     setFormData((prev) => ({ ...prev, [field]: values }));
+  }
+
+  function autoFillFields() {
+    const auto = autoFillProductFields(formData);
+    setFormData((prev) => ({
+      ...prev,
+      recipients: prev.recipients.length ? prev.recipients : auto.recipients,
+      interests: prev.interests.length ? prev.interests : auto.interests,
+      occasions: prev.occasions.length ? prev.occasions : auto.occasions,
+      giftTypes: prev.giftTypes.length ? prev.giftTypes : auto.giftTypes,
+      budget: prev.budget || auto.budget,
+      discountPercent: prev.discountPercent ?? auto.discountPercent,
+      wowRating: prev.wowRating || auto.wowRating,
+      riskLevel: prev.riskLevel || auto.riskLevel,
+    }));
   }
 
   function handleImageFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -469,7 +485,16 @@ export default function ProductForm({
 
           {/* Categorization */}
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Категория</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-2xl font-semibold">Категория</h2>
+              <button
+                type="button"
+                onClick={autoFillFields}
+                className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-400 transition"
+              >
+                Автозаполнить поля
+              </button>
+            </div>
             <div className="space-y-4">
               <select
                 value={formData.budget}

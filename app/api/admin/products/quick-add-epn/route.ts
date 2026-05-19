@@ -3,6 +3,7 @@ import type { Product } from '@/types/product';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { createProduct } from '@/lib/supabase';
 import { fetchEpnProductMetadata } from '@/lib/epn';
+import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,10 +71,11 @@ export async function POST(request: NextRequest) {
     const productStatus: Product['status'] = body.status === 'draft' ? 'draft' : isCompleteProduct ? 'active' : 'draft';
     const isActive = body.isActive ?? isCompleteProduct;
 
-    const product = {
+    const product = applyAutoFillToProduct({
       title: body.title || metadata?.title || 'Новый товар ePN',
       description: body.description || metadata?.description || '',
       price: body.price ?? metadata?.price ?? 0,
+      oldPrice: body.oldPrice ?? metadata?.oldPrice,
       currency: body.currency || metadata?.currency || 'RUB',
       imageUrl: body.imageUrl || metadata?.imageUrl || '',
       originalUrl: body.originalUrl || affiliateUrl,
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
       isActive,
       status: productStatus,
       lastSyncedAt: isCompleteProduct ? new Date().toISOString() : undefined,
-    };
+    });
 
     const saved = await createProduct(product);
     if (!saved) {

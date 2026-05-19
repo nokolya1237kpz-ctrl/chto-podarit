@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { createProduct } from '@/lib/supabase';
 import { mapEpnGoodToProduct, detectMarketplaceFromUrl, generateEpnDeeplink } from '@/lib/epn';
+import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const product = {
+    const product = applyAutoFillToProduct({
       title: productData.title,
       description: productData.description,
       price: productData.price,
@@ -65,9 +66,9 @@ export async function POST(request: NextRequest) {
       tags,
       wowRating: 5,
       riskLevel: 'low' as const,
-      isActive: true,
-      status: 'active' as const,
-    };
+      isActive: productData.price > 0,
+      status: productData.price > 0 ? 'active' as const : 'draft' as const,
+    });
 
     const savedProduct = await createProduct(product);
     if (!savedProduct) {

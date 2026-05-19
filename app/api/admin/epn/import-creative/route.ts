@@ -3,6 +3,7 @@ import { verifyAdminSession } from '@/lib/adminAuth';
 import { fetchPageMetadata } from '@/lib/imageMetadata';
 import { createProduct } from '@/lib/supabase';
 import { detectMarketplaceFromProductUrl, type EpnCreative } from '@/lib/epn';
+import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     const hasUsefulMetadata = Boolean(metadata?.title || metadata?.imageUrl);
     const status = hasUsefulMetadata ? 'active' : 'draft';
 
-    const savedProduct = await createProduct({
+    const product = applyAutoFillToProduct({
       title,
       description,
       price: 0,
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
       isActive: status === 'active',
       status,
     });
+
+    const savedProduct = await createProduct(product);
 
     if (!savedProduct) {
       return NextResponse.json({ success: false, error: 'Не удалось сохранить товар' }, { status: 500 });

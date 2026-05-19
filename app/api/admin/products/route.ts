@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { Product } from '@/types/product';
+import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 
 /**
  * GET /api/admin/products
@@ -76,11 +77,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = applyAutoFillToProduct({
       ...body,
       status: body.status ?? 'active',
       isActive: body.isActive ?? true,
-    };
+    });
 
     const created = await createProduct(product);
 

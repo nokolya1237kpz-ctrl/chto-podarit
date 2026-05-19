@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { updateProduct, deleteProduct } from '@/lib/supabase';
 import type { Product } from '@/types/product';
+import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 
 export async function PUT(
   request: NextRequest,
@@ -22,7 +23,7 @@ export async function PUT(
 
     const updates: Partial<
       Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
-    > = body;
+    > = applyAutoFillToProduct(body);
 
     const updated = await updateProduct(id, updates);
 
