@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
         requestUrl: requestUrl.toString(),
         requestParams: result.requestParams,
         responseBody: result.responseBody,
+        successfulViewRules: result.successfulViewRules,
+        triedViewRules: result.triedViewRules,
       },
     });
   } catch (error) {
@@ -41,6 +43,8 @@ export async function GET(request: NextRequest) {
     const lowerMessage = message.toLowerCase();
     const status = lowerMessage.includes('lang') || lowerMessage.includes('viewrules') || lowerMessage.includes('view_rules') ? 422 : 500;
 
+    const triedViewRules = (error as any)?.details?.triedViewRules || [];
+
     return NextResponse.json(
       {
         success: false,
@@ -48,8 +52,10 @@ export async function GET(request: NextRequest) {
         details,
         debug: {
           requestUrl: request?.url || '',
-          requestParams: { q: query?.trim() || undefined, limit, lang: 'ru', locale: 'ru', viewRules: 'unknown' },
+          requestParams: { q: query?.trim() || undefined, limit, lang: 'ru' },
           responseBody: details || null,
+          successfulViewRules: null,
+          triedViewRules,
         },
       },
       { status }

@@ -93,6 +93,8 @@ export interface EpnOffersFetchResult {
   offers: EpnOffer[];
   requestParams: Record<string, any>;
   responseBody: any;
+  successfulViewRules?: string;
+  triedViewRules: string[];
 }
 
 export async function getEpnSsidToken(): Promise<string> {
@@ -253,11 +255,14 @@ export async function epnFetch(
 async function fetchEpnOffersWithViewRules(
   requestParams: Record<string, any>
 ): Promise<EpnOffersFetchResult> {
-  const viewRulesOptions = ['true', '1', 'false', '0'];
-  let lastError: unknown = null;
+  const requestBase = { ...requestParams, lang: 'ru' };
+  const viewRulesOptions = ['area_web', 'role_user', 'role_cashback', 'area_mobile', 'area_backit_bot'];
+  const triedViewRules: string[] = [];
 
   for (const viewRules of viewRulesOptions) {
-    const params = { ...requestParams, viewRules };
+    triedViewRules.push(viewRules);
+    const params = { ...requestBase, viewRules };
+
     try {
       const responseBody = await epnFetch('/offers/list', {
         query: params,
@@ -267,9 +272,10 @@ async function fetchEpnOffersWithViewRules(
         offers,
         requestParams: params,
         responseBody,
+        successfulViewRules: viewRules,
+        triedViewRules,
       };
     } catch (error) {
-      lastError = error;
       if (error instanceof EpnApiError && error.status === 422 && isViewRulesError(error)) {
         continue;
       }
@@ -277,13 +283,11 @@ async function fetchEpnOffersWithViewRules(
     }
   }
 
-  throw lastError instanceof Error
-    ? lastError
-    : new EpnApiError('ePN offers viewRules fallback failed', lastError);
+  throw new EpnApiError('ePN offers request failed for all viewRules values', { triedViewRules }, 422);
 }
 
 export async function getEpnOffers(): Promise<EpnOffersFetchResult> {
-  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', locale: 'ru', limit: 50 });
+  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', limit: 50 });
 }
 
 export async function searchEpnOffers(query: string, limit = 20): Promise<EpnOffersFetchResult> {
@@ -292,7 +296,7 @@ export async function searchEpnOffers(query: string, limit = 20): Promise<EpnOff
     return getEpnOffers();
   }
 
-  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', locale: 'ru', q: trimmed, limit });
+  return fetchEpnOffersWithViewRules({ v: '2', lang: 'ru', q: trimmed, limit });
 }
 
 export async function getEpnHotGoods(params: {
