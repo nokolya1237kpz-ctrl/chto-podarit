@@ -66,7 +66,7 @@ function rowToProduct(row: ProductRow): Product {
     isBestPrice: row.is_best_price,
     discountPercent: row.discount_percent || undefined,
     isActive: row.is_active,
-    status: (row.status === 'draft' ? 'draft' : 'active'),
+    status: (row.status === 'draft' || row.status === 'archived' ? row.status : 'active'),
     sourceProvider: normalizeSourceProvider(row.source_provider),
     sourceType: (row.source_type || normalizeSourceProvider(row.source_provider)) as Product['sourceType'],
     lastSyncedAt: row.last_synced_at || undefined,
@@ -139,6 +139,7 @@ export async function searchProducts(
     sourceProvider?: string;
     status?: string;
     isActive?: boolean;
+    includeArchived?: boolean;
   },
   supabase = supabaseAdmin
 ): Promise<Product[]> {
@@ -161,6 +162,8 @@ export async function searchProducts(
 
     if (filters.status) {
       query = query.eq('status', filters.status);
+    } else if (!filters.includeArchived) {
+      query = query.neq('status', 'archived');
     }
 
     if (filters.query) {
@@ -373,7 +376,7 @@ export async function deleteProduct(
   try {
     const { error } = await supabase
       .from('products')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id);
 
     if (error) {

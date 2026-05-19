@@ -21,7 +21,7 @@ export type SourceProvider =
 
 export type SourceType = SourceProvider | 'api' | 'mock';
 
-export type ProductStatus = 'draft' | 'active';
+export type ProductStatus = 'draft' | 'active' | 'archived';
 
 export interface Product {
   id: string;

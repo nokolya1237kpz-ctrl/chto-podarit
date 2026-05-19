@@ -36,7 +36,7 @@ create table if not exists products (
   is_best_price boolean default false,
   discount_percent int,
   is_active boolean default true,
-  status text default 'active',
+  status text default 'active' check (status in ('draft', 'active', 'archived')),
   source_provider text default 'manual',
   source_type text default 'manual',
   last_price_checked_at timestamp with time zone,

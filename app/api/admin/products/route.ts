@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('query') || undefined;
     const marketplace = searchParams.get('marketplace') || undefined;
     const sourceProvider = searchParams.get('sourceType') || undefined;
-    const status = searchParams.get('status') || undefined;
+    const rawStatus = searchParams.get('status') || undefined;
+    const status = rawStatus && rawStatus !== 'all' ? rawStatus : undefined;
+    const includeArchived = rawStatus === 'all';
     const isActive = searchParams.get('isActive')
       ? searchParams.get('isActive') === 'true'
       : undefined;
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
       sourceProvider: sourceProvider,
       status: status,
       isActive: isActive,
+      includeArchived,
     });
 
     return NextResponse.json({

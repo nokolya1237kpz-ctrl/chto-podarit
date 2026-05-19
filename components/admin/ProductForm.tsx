@@ -631,6 +631,17 @@ export default function ProductForm({
                       />
                       <span>Черновик</span>
                     </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="archived"
+                        checked={formData.status === 'archived'}
+                        onChange={() => setFormData({ ...formData, status: 'archived', isActive: false })}
+                        className="w-4 h-4"
+                      />
+                      <span>Архив</span>
+                    </label>
                   </div>
                 </label>
                 <label className="block rounded-2xl border border-white/10 bg-slate-800 p-4">

@@ -57,7 +57,7 @@ export default function AdminDraftsPage() {
   }
 
   async function deleteDraft(id: string) {
-    if (!confirm('Удалить черновик?')) return;
+    if (!confirm('Товар будет удалён из базы без восстановления. Продолжить?')) return;
     try {
       const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
@@ -69,6 +69,25 @@ export default function AdminDraftsPage() {
     } catch (error) {
       console.error(error);
       setError('Ошибка удаления черновика');
+    }
+  }
+
+  async function archiveDraft(id: string) {
+    try {
+      const res = await fetch(`/api/admin/products/${id}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: false }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDrafts(drafts.filter((item) => item.id !== id));
+      } else {
+        setError(data.error || 'Не удалось архивировать черновик');
+      }
+    } catch (error) {
+      console.error(error);
+      setError('Ошибка архивации черновика');
     }
   }
 
@@ -128,7 +147,14 @@ export default function AdminDraftsPage() {
                       onClick={() => deleteDraft(product.id)}
                       className="rounded-2xl bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-200 hover:bg-rose-500/20 transition"
                     >
-                      Удалить
+                      Удалить навсегда
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => archiveDraft(product.id)}
+                      className="rounded-2xl bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-500/20 transition"
+                    >
+                      В архив
                     </button>
                   </div>
                 </div>

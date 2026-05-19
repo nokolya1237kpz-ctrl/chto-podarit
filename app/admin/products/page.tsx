@@ -54,7 +54,7 @@ export default function AdminProductsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Вы действительно хотите удалить этот товар?')) return;
+    if (!confirm('Товар будет удалён из базы без восстановления. Продолжить?')) return;
 
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
@@ -64,7 +64,52 @@ export default function AdminProductsPage() {
       if (res.ok) {
         setProducts(products.filter((p) => p.id !== id));
       } else {
-        setError('Не удалось удалить товар');
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Не удалось удалить товар');
+      }
+    } catch (err) {
+      setError('Сетевая ошибка');
+      console.error(err);
+    }
+  }
+
+  async function handleArchive(id: string) {
+    try {
+      const res = await fetch(`/api/admin/products/${id}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: false }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProducts((prev) => status === 'archived'
+          ? prev.map((product) => product.id === id ? data.data : product)
+          : prev.filter((product) => product.id !== id)
+        );
+      } else {
+        setError(data.error || 'Не удалось архивировать товар');
+      }
+    } catch (err) {
+      setError('Сетевая ошибка');
+      console.error(err);
+    }
+  }
+
+  async function handleRestore(id: string) {
+    try {
+      const res = await fetch(`/api/admin/products/${id}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProducts((prev) => status === 'archived'
+          ? prev.filter((product) => product.id !== id)
+          : prev.map((product) => product.id === id ? data.data : product)
+        );
+      } else {
+        setError(data.error || 'Не удалось восстановить товар');
       }
     } catch (err) {
       setError('Сетевая ошибка');
@@ -165,9 +210,11 @@ export default function AdminProductsPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">Все статусы</option>
-              <option value="active">Опубликован</option>
-              <option value="draft">Черновик</option>
+              <option value="">Активные и черновики</option>
+              <option value="active">Активные</option>
+              <option value="draft">Черновики</option>
+              <option value="archived">Архив</option>
+              <option value="all">Все</option>
             </select>
             <select
               value={isActive}
@@ -207,8 +254,8 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 text-sm">{getMarketplaceName(product.marketplace)}</td>
                     <td className="px-6 py-4 text-sm text-purple-300">{product.sourceType}</td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={product.status === 'active' ? 'text-green-400' : 'text-yellow-300'}>
-                        {product.status === 'active' ? 'Опубликован' : 'Черновик'}
+                      <span className={product.status === 'active' ? 'text-green-400' : product.status === 'archived' ? 'text-slate-400' : 'text-yellow-300'}>
+                        {product.status === 'active' ? 'Опубликован' : product.status === 'archived' ? 'Архив' : 'Черновик'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -223,7 +270,15 @@ export default function AdminProductsPage() {
                       >
                         Редактировать
                       </Link>
-                      {!product.isActive || product.status !== 'active' ? (
+                      {product.status === 'archived' ? (
+                        <button
+                          onClick={() => handleRestore(product.id)}
+                          className="text-emerald-400 hover:text-emerald-300"
+                        >
+                          Восстановить
+                        </button>
+                      ) : null}
+                      {product.status !== 'archived' && (!product.isActive || product.status !== 'active') ? (
                         <button
                           onClick={() => handlePublish(product.id)}
                           className="text-emerald-400 hover:text-emerald-300"
@@ -231,11 +286,19 @@ export default function AdminProductsPage() {
                           Опубликовать
                         </button>
                       ) : null}
+                      {product.status !== 'archived' ? (
+                        <button
+                          onClick={() => handleArchive(product.id)}
+                          className="text-amber-300 hover:text-amber-200"
+                        >
+                          В архив
+                        </button>
+                      ) : null}
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="text-red-400 hover:text-red-300"
                       >
-                        Удалить
+                        Удалить навсегда
                       </button>
                     </td>
                   </tr>
