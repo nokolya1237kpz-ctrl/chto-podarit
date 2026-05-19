@@ -261,7 +261,12 @@ export async function epnFetch(
   }
 
   if (!response.ok) {
-    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
+    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), {
+      method: options.method || 'GET',
+      url: url.toString(),
+      body: options.body,
+      responseBody: body,
+    }, response.status);
   }
 
   return body;
@@ -375,6 +380,8 @@ export function mapEpnGoodToProduct(good: any) {
 export interface GenerateEpnDeeplinkOptions {
   offerId?: string;
   placementId?: string;
+  subId?: string;
+  description?: string;
 }
 
 export interface EpnDeeplinkResult {
@@ -386,8 +393,10 @@ export interface EpnDeeplinkResult {
 }
 
 function normalizeEpnDeeplinkBody(response: any) {
-  const deeplink = response?.data?.attributes?.deeplink || response?.deeplink || response?.data?.attributes?.url || response?.url;
-  const creativeId = response?.data?.id || response?.id || response?.creative_id || response?.data?.attributes?.id;
+  const firstCreative = Array.isArray(response?.data) ? response.data[0] : response?.data;
+  const attributes = firstCreative?.attributes || response?.data?.attributes || response?.attributes || {};
+  const deeplink = attributes.code || attributes.link || attributes.deeplink || response?.deeplink || response?.url;
+  const creativeId = firstCreative?.id || response?.data?.id || response?.id || response?.creative_id || attributes.id;
 
   if (!deeplink) {
     throw new EpnApiError('Не удалось получить deeplink из ответа ePN', response);
@@ -429,18 +438,20 @@ export async function generateEpnDeeplink(
 
   try {
     const body: any = {
-      url,
-      client_id: process.env.EPN_CLIENT_ID,
+      link: url,
+      offerId: Number(options.offerId),
+      description: options.description || `chto-podarit ${Date.now()}`.slice(0, 100),
+      type: 'deeplink',
     };
 
-    if (options.offerId) {
-      body.offer_id = options.offerId;
-    }
     if (options.placementId) {
-      body.placement_id = options.placementId;
+      body.placementId = Number(options.placementId);
+    }
+    if (options.subId) {
+      body.sub1 = options.subId;
     }
 
-    const response = await epnFetch('/creatives', {
+    const response = await epnFetch('/creative/create', {
       method: 'POST',
       body,
     });
@@ -462,7 +473,7 @@ export async function generateEpnDeeplink(
     const err = error instanceof Error ? error : new Error(String(error));
     const details = (error as any)?.details;
     const message = formatEpnDeeplinkError(err, details);
-    throw new EpnApiError(message, details);
+    throw new EpnApiError(message, details, (error as any)?.status);
   }
 }
 

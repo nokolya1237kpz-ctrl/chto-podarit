@@ -60,6 +60,19 @@ type EpnGood = {
   offerStatus?: string;
 };
 
+type OfferActionState = {
+  loadingImport?: boolean;
+  importError?: string;
+  importMessage?: string;
+  loadingDeeplink?: boolean;
+  deeplinkError?: string;
+  deeplinkMessage?: string;
+  deeplinkUrl?: string;
+  inputUrl?: string;
+  debug?: any;
+  debugOpen?: boolean;
+};
+
 export default function EpnAdminPage() {
   const router = useRouter();
   const [status, setStatus] = useState<EpnStatus | null>(null);
@@ -74,8 +87,7 @@ export default function EpnAdminPage() {
   const [goodsQuery, setGoodsQuery] = useState('');
   const [goods, setGoods] = useState<EpnGood[]>([]);
   const [goodsLoading, setGoodsLoading] = useState(false);
-  const [importingOfferId, setImportingOfferId] = useState<string | null>(null);
-  const [deeplinkingOfferId, setDeeplinkingOfferId] = useState<string | null>(null);
+  const [offerActions, setOfferActions] = useState<Record<string, OfferActionState>>({});
   const [selectedGood, setSelectedGood] = useState<EpnGood | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -187,9 +199,12 @@ export default function EpnAdminPage() {
   };
 
   const importOfferProducts = async (offer: EpnOffer) => {
-    setError('');
-    setMessage('');
-    setImportingOfferId(offer.id);
+    updateOfferAction(offer.id, {
+      loadingImport: true,
+      importError: '',
+      importMessage: '',
+      debug: undefined,
+    });
 
     try {
       const params = new URLSearchParams({
@@ -198,13 +213,33 @@ export default function EpnAdminPage() {
       });
       const goodsRes = await fetch(`/api/admin/epn/goods-hot?${params.toString()}`);
       const goodsData = await goodsRes.json();
+      if (goodsData.reason === 'NO_GOODS') {
+        updateOfferAction(offer.id, {
+          importError: 'У этого оффера нет товаров для импорта',
+          debug: {
+            method: 'GET',
+            url: `/api/admin/epn/goods-hot?${params.toString()}`,
+            responseBody: goodsData,
+            reason: 'NO_GOODS',
+          },
+        });
+        return;
+      }
       if (!goodsRes.ok || !goodsData.success) {
         throw new Error(goodsData.error || 'Не удалось получить товары оффера');
       }
 
       const offerGoods: EpnGood[] = goodsData.goods || [];
       if (offerGoods.length === 0) {
-        setMessage('Для этого оффера товары не найдены');
+        updateOfferAction(offer.id, {
+          importError: 'У этого оффера нет товаров для импорта',
+          debug: {
+            method: 'GET',
+            url: `/api/admin/epn/goods-hot?${params.toString()}`,
+            responseBody: goodsData,
+            reason: 'NO_GOODS',
+          },
+        });
         return;
       }
 
@@ -229,11 +264,20 @@ export default function EpnAdminPage() {
       }
 
       setGoods(offerGoods);
-      setMessage(`Импортировано ${importedCount} из ${offerGoods.length} товаров оффера`);
+      updateOfferAction(offer.id, {
+        importMessage: `Импортировано ${importedCount} из ${offerGoods.length} товаров оффера`,
+        debug: {
+          method: 'GET',
+          url: `/api/admin/epn/goods-hot?${params.toString()}`,
+          responseBody: goodsData,
+        },
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка импорта товаров оффера');
+      updateOfferAction(offer.id, {
+        importError: err instanceof Error ? err.message : 'Ошибка импорта товаров оффера',
+      });
     } finally {
-      setImportingOfferId(null);
+      updateOfferAction(offer.id, { loadingImport: false });
     }
   };
 
@@ -245,38 +289,87 @@ export default function EpnAdminPage() {
   };
 
   const createOfferDeeplink = async (offer: EpnOffer) => {
-    const url = getOfferUrl(offer);
+    const action = offerActions[offer.id] || {};
+    const url = action.inputUrl?.trim() || '';
     if (!url) {
-      setError('У оффера нет ссылки для deeplink');
+      updateOfferAction(offer.id, { deeplinkError: 'Вставьте URL товара', deeplinkMessage: '' });
+      return;
+    }
+    if (!offer.deeplinkSupport) {
+      updateOfferAction(offer.id, {
+        deeplinkError: 'Для этого оффера недоступна генерация deeplink',
+        deeplinkMessage: '',
+      });
       return;
     }
 
-    setError('');
-    setMessage('');
-    setDeeplinkingOfferId(offer.id);
+    const requestBody = {
+      offerId: offer.id,
+      originalUrl: url,
+      deeplinkSupport: Boolean(offer.deeplinkSupport),
+    };
+
+    updateOfferAction(offer.id, {
+      loadingDeeplink: true,
+      deeplinkError: '',
+      deeplinkMessage: '',
+      deeplinkUrl: '',
+      debug: {
+        method: 'POST',
+        url: '/api/admin/epn/deeplink',
+        body: requestBody,
+      },
+    });
 
     try {
       const res = await fetch('/api/admin/epn/deeplink', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          offerId: offer.id,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось создать deeplink');
+        const errorMessage = res.status === 405
+          ? 'Неверный метод или endpoint deeplink. Проверьте интеграцию API.'
+          : data.error || 'Не удалось создать deeplink';
+        updateOfferAction(offer.id, {
+          deeplinkError: errorMessage,
+          debug: {
+            method: 'POST',
+            url: '/api/admin/epn/deeplink',
+            body: requestBody,
+            responseBody: data,
+          },
+        });
+        return;
       }
-      setMessage('Deeplink создан');
-      if (data.affiliateUrl) {
-        window.open(data.affiliateUrl, '_blank', 'noopener,noreferrer');
-      }
+      updateOfferAction(offer.id, {
+        deeplinkMessage: 'Deeplink создан',
+        deeplinkUrl: data.affiliateUrl || '',
+        debug: {
+          method: 'POST',
+          url: '/api/admin/epn/deeplink',
+          body: requestBody,
+          responseBody: data,
+        },
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка создания deeplink');
+      updateOfferAction(offer.id, {
+        deeplinkError: err instanceof Error ? err.message : 'Ошибка создания deeplink',
+      });
     } finally {
-      setDeeplinkingOfferId(null);
+      updateOfferAction(offer.id, { loadingDeeplink: false });
     }
+  };
+
+  const updateOfferAction = (offerId: string, updates: OfferActionState) => {
+    setOfferActions((current) => ({
+      ...current,
+      [offerId]: {
+        ...current[offerId],
+        ...updates,
+      },
+    }));
   };
 
   return (
@@ -345,7 +438,9 @@ export default function EpnAdminPage() {
             <div className="mt-6 rounded-3xl border border-dashed border-white/10 p-6 text-center text-slate-400">Результаты появятся после поиска</div>
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
-              {offers.map((offer) => (
+              {offers.map((offer) => {
+                const action = offerActions[offer.id] || {};
+                return (
                 <div key={offer.id} className="flex w-full max-w-[520px] flex-col justify-self-center overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80">
                   <div className="relative h-32 bg-slate-900/70">
                     {offer.image ? (
@@ -394,6 +489,40 @@ export default function EpnAdminPage() {
                       <div>Available deeplink support: {offer.deeplinkSupport ? 'Да' : 'Нет'}</div>
                     </div>
 
+                    <div className="mt-4">
+                      <label className="block text-xs font-semibold text-slate-300">URL товара или страницы</label>
+                      <input
+                        value={action.inputUrl || ''}
+                        onChange={(event) => updateOfferAction(offer.id, { inputUrl: event.target.value, deeplinkError: '' })}
+                        placeholder="https://www.aliexpress.ru/item/..."
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {(action.importError || action.deeplinkError || action.importMessage || action.deeplinkMessage) ? (
+                      <div className={`mt-3 rounded-2xl border p-3 text-xs ${action.importError || action.deeplinkError ? 'border-red-500/20 bg-red-500/10 text-red-200' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'}`}>
+                        {action.importError || action.deeplinkError || action.importMessage || action.deeplinkMessage}
+                        {action.deeplinkUrl ? (
+                          <a href={action.deeplinkUrl} target="_blank" rel="noreferrer" className="mt-2 block break-all font-semibold text-cyan-100">
+                            {action.deeplinkUrl}
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {action.debug ? (
+                      <details
+                        open={Boolean(action.debugOpen)}
+                        onToggle={(event) => updateOfferAction(offer.id, { debugOpen: event.currentTarget.open })}
+                        className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300"
+                      >
+                        <summary className="cursor-pointer select-none font-semibold text-slate-100">Показать debug</summary>
+                        <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-slate-900 p-3">
+                          {JSON.stringify(action.debug, null, 2)}
+                        </pre>
+                      </details>
+                    ) : null}
+
                     <div className="mt-auto grid grid-cols-3 gap-2 pt-4">
                       {getOfferUrl(offer) ? (
                         <a
@@ -410,23 +539,24 @@ export default function EpnAdminPage() {
                       <button
                         type="button"
                         onClick={() => importOfferProducts(offer)}
-                        disabled={importingOfferId === offer.id}
+                        disabled={Boolean(action.loadingImport)}
                         className="rounded-2xl bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
                       >
-                        {importingOfferId === offer.id ? 'Импорт...' : 'Импортировать'}
+                        {action.loadingImport ? 'Импорт...' : 'Импортировать'}
                       </button>
                       <button
                         type="button"
                         onClick={() => createOfferDeeplink(offer)}
-                        disabled={!getOfferUrl(offer) || deeplinkingOfferId === offer.id}
+                        disabled={Boolean(action.loadingDeeplink)}
                         className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                       >
-                        {deeplinkingOfferId === offer.id ? '...' : 'Deeplink'}
+                        {action.loadingDeeplink ? '...' : 'Deeplink'}
                       </button>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {requestUrl ? (

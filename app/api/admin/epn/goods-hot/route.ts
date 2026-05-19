@@ -32,6 +32,16 @@ export async function GET(request: NextRequest) {
       priceMax,
     });
 
+    if (offerId && goods.length === 0) {
+      return NextResponse.json({
+        success: false,
+        reason: 'NO_GOODS',
+        error: 'У этого оффера нет товаров для импорта',
+        goods,
+        count: 0,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       goods,
