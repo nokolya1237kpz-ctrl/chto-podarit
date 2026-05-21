@@ -18,6 +18,14 @@ const defaultCategories = [
   'Книги',
 ];
 
+const presetButtons = [
+  { label: 'Импортировать косметику', queries: ['помада', 'косметика', 'уход за лицом', 'тушь', 'крем'] },
+  { label: 'Импортировать электронику', queries: ['наушники', 'смарт часы', 'гаджеты', 'колонка bluetooth', 'power bank'] },
+  { label: 'Импортировать товары TikTok', queries: ['tiktok тренд', 'viral beauty', 'популярный массажер', 'необычный подарок', 'хит продаж'] },
+  { label: 'Импортировать товары Ozon', queries: ['ozon наушники', 'ozon кухня', 'ozon подарок'] },
+  { label: 'Импортировать товары WB', queries: ['wildberries косметика', 'wildberries фитнес', 'wildberries подарок'] },
+];
+
 export default function BulkImportPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -43,7 +51,7 @@ export default function BulkImportPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Импорт не выполнен');
       }
-      setMessage(`${name}: импортировано ${data.imported || 0}, черновиков ${data.drafted || 0}, ошибок ${data.failed || 0}`);
+      setMessage(`${name}: импортировано ${data.imported || 0}, обновлено ${data.updated || 0}, active ${data.importedActive || 0}, draft ${data.importedDraft || data.drafted || 0}, skipped duplicates ${data.skippedDuplicate || 0}, ошибок ${data.errors || data.failed || 0}`);
       setReportRows(data.rows || data.reports || []);
     } catch (err) {
       const text = err instanceof Error ? err.message : 'Ошибка импорта';
@@ -91,6 +99,18 @@ export default function BulkImportPage() {
               >
                 Импортировать 10 товаров
               </button>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {presetButtons.map((preset) => (
+                <button
+                  key={preset.label}
+                  disabled={loading === preset.label}
+                  onClick={() => runImport(preset.label, '/api/admin/bulk-import/preset', { queries: preset.queries, limit: 10 })}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
           </div>
 

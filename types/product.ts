@@ -4,6 +4,11 @@ export type MarketplaceId =
   | 'yandex_market'
   | 'aliexpress'
   | 'amazon'
+  | 'dns_shop'
+  | 'citilink'
+  | 'megamarket'
+  | 'mvideo'
+  | 'eldorado'
   | 'other';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -17,6 +22,11 @@ export type SourceProvider =
   | 'yandex_market'
   | 'ozon'
   | 'wildberries'
+  | 'dns_shop'
+  | 'citilink'
+  | 'megamarket'
+  | 'mvideo'
+  | 'eldorado'
   | 'direct_api';
 
 export type SourceType = SourceProvider | 'api' | 'mock' | 'feed' | 'parser';
@@ -56,12 +66,16 @@ export interface Product {
   trendSource?: string;
   trendLabel?: string;
   trendScore?: number;
+  isTrending?: boolean;
+  trendVelocity?: number;
   isActive: boolean;
   status: ProductStatus;
   sourceProvider: SourceProvider;
   sourceType?: SourceType;
   lastSyncedAt?: string;
   lastPriceCheckedAt?: string;
+  deletedAt?: string;
+  deletedReason?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -139,6 +153,8 @@ export interface ProductRow {
   source_type: string | null;
   last_synced_at: string | null;
   last_price_checked_at: string | null;
+  deleted_at?: string | null;
+  deleted_reason?: string | null;
   created_at: string;
   updated_at: string;
 }

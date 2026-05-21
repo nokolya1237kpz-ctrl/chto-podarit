@@ -34,6 +34,10 @@ function normalizeSourceProvider(value: string | null | undefined): Product['sou
   return (value || 'manual') as Product['sourceProvider'];
 }
 
+function isMissingDeletedAtColumn(error: any) {
+  return error?.code === '42703' && String(error?.message || '').includes('deleted_at');
+}
+
 /**
  * Transform database row to Product
  */
@@ -76,6 +80,8 @@ function rowToProduct(row: ProductRow): Product {
     sourceProvider: normalizeSourceProvider(row.source_provider),
     sourceType: (row.source_type || normalizeSourceProvider(row.source_provider)) as Product['sourceType'],
     lastSyncedAt: row.last_synced_at || undefined,
+    deletedAt: row.deleted_at || undefined,
+    deletedReason: row.deleted_reason || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -88,12 +94,21 @@ export async function getActiveProducts(
   if (!supabase) return [];
 
   try {
-    const { data, error } = await supabase
+    let request = supabase
       .from('products')
       .select('*')
       .eq('is_active', true)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
+    let { data, error } = await request.is('deleted_at', null);
+    if (isMissingDeletedAtColumn(error)) {
+      ({ data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }));
+    }
 
     if (error) {
       console.error('Error fetching products:', error);
@@ -152,33 +167,46 @@ export async function searchProducts(
   if (!supabase) return [];
 
   try {
-    let query = supabase.from('products').select('*');
+    const buildQuery = (withDeletedFilter: boolean) => {
+      let query = supabase.from('products').select('*');
 
-    if (filters.marketplace) {
-      query = query.eq('marketplace', filters.marketplace);
-    }
+      if (filters.marketplace) {
+        query = query.eq('marketplace', filters.marketplace);
+      }
 
-    if (filters.sourceProvider) {
-      query = query.eq('source_provider', filters.sourceProvider);
-    }
+      if (filters.sourceProvider) {
+        query = query.eq('source_provider', filters.sourceProvider);
+      }
 
-    if (typeof filters.isActive === 'boolean') {
-      query = query.eq('is_active', filters.isActive);
-    }
+      if (typeof filters.isActive === 'boolean') {
+        query = query.eq('is_active', filters.isActive);
+      }
 
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    } else if (!filters.includeArchived) {
-      query = query.neq('status', 'archived');
-    }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      } else if (!filters.includeArchived) {
+        query = query.neq('status', 'archived');
+      }
 
-    if (filters.query) {
-      query = query.ilike('title', `%${filters.query}%`);
-    }
+      if (withDeletedFilter && !filters.includeArchived) {
+        query = query.is('deleted_at', null);
+      }
 
-    const { data, error } = await query.order('created_at', {
+      if (filters.query) {
+        query = query.ilike('title', `%${filters.query}%`);
+      }
+
+      return query;
+    };
+
+    let { data, error } = await buildQuery(true).order('created_at', {
       ascending: false,
     });
+    if (isMissingDeletedAtColumn(error)) {
+      ({ data, error } = await buildQuery(false).order('created_at', {
+        ascending: false,
+      }));
+    }
 
     if (error) {
       console.error('Error searching products:', error);
@@ -261,14 +289,28 @@ export async function upsertProductByExternalId(
   }
 
   try {
-    const { data: existing } = await supabase
+    let { data: existing, error: existingError } = await supabase
       .from('products')
-      .select('id')
+      .select('id, deleted_at')
       .eq('external_product_id', product.externalProductId)
       .eq('source_provider', product.sourceProvider)
       .maybeSingle();
+    if (isMissingDeletedAtColumn(existingError)) {
+      const fallback = await supabase
+        .from('products')
+        .select('id')
+        .eq('external_product_id', product.externalProductId)
+        .eq('source_provider', product.sourceProvider)
+        .maybeSingle();
+      existing = fallback.data as any;
+      existingError = fallback.error;
+    }
 
     if (existing?.id) {
+      if ((existing as any).deleted_at) {
+        console.warn('Import skipped because matching product is soft-deleted:', product.externalProductId);
+        return null;
+      }
       return updateProduct(existing.id, product, supabase);
     }
 
@@ -356,6 +398,12 @@ export async function updateProduct(
         ...(updates.lastSyncedAt !== undefined && {
           last_synced_at: updates.lastSyncedAt,
         }),
+        ...(updates.deletedAt !== undefined && {
+          deleted_at: updates.deletedAt,
+        }),
+        ...(updates.deletedReason !== undefined && {
+          deleted_reason: updates.deletedReason,
+        }),
       })
       .eq('id', id)
       .select()
@@ -380,10 +428,25 @@ export async function deleteProduct(
   if (!supabase) return false;
 
   try {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('products')
-      .delete()
+      .update({
+        status: 'archived',
+        is_active: false,
+        deleted_at: new Date().toISOString(),
+        deleted_reason: 'admin_delete',
+      })
       .eq('id', id);
+
+    if (isMissingDeletedAtColumn(error)) {
+      ({ error } = await supabase
+        .from('products')
+        .update({
+          status: 'archived',
+          is_active: false,
+        })
+        .eq('id', id));
+    }
 
     if (error) {
       console.error('Error deleting product:', error);

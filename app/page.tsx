@@ -6,18 +6,26 @@ import ScrollReveal from '../components/ScrollReveal';
 import RotatingHeroProducts from '../components/RotatingHeroProducts';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
+import { enrichTrendProduct, getPopularClickCounts, shuffleProducts } from '@/lib/trends';
 
 export default async function Home() {
   let products: Product[] = [];
   if (isSupabaseConfigured()) {
     products = await getActiveProducts();
   }
+  const clickCounts = await getPopularClickCounts();
+  products = products.map((product) => enrichTrendProduct(product, {
+    localClicks: clickCounts.get(product.id) || 0,
+    importedRecently: product.createdAt ? Date.now() - new Date(product.createdAt).getTime() < 14 * 24 * 60 * 60 * 1000 : false,
+    manualTag: product.tags?.some((tag) => /trend|viral|tiktok|хит|популяр/i.test(tag)),
+  }));
   const trendingProducts = products
-    .filter((product) => `${product.tags?.join(' ')} ${product.title}`.toLowerCase().match(/trend|viral|hit|хит|популяр/))
-    .concat(products.slice(0, 8))
+    .filter((product) => product.isTrending || `${product.tags?.join(' ')} ${product.title}`.toLowerCase().match(/trend|viral|hit|хит|популяр/))
+    .sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0))
     .slice(0, 6);
   const cheapestDeals = [...products].filter((product) => product.price > 0).sort((a, b) => a.price - b.price).slice(0, 6);
-  const newArrivals = products.slice(0, 6);
+  const newArrivals = [...products].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 6);
+  const randomProducts = shuffleProducts(products, 6);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.16),transparent_25%),linear-gradient(180deg,#070a12,#0b1020)] text-white">
@@ -139,9 +147,9 @@ export default async function Home() {
             <PopularCollections />
           </section>
 
-          <ProductRail title="Трендовые товары" subtitle="Viral, hit и небанальные идеи из каталога" products={trendingProducts} />
-          <ProductRail title="Выгодные находки" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
-          <ProductRail title="Новые поступления" subtitle="Свежие active товары, готовые к кликам" products={newArrivals} />
+          <ProductRail title="Тренды TikTok и WB" subtitle="Viral, hit и небанальные идеи из каталога" products={trendingProducts.length ? trendingProducts : randomProducts} />
+          <ProductRail title="Cheapest today" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
+          <ProductRail title="Recently added" subtitle="Свежие active товары, готовые к кликам" products={newArrivals.length ? newArrivals : randomProducts} />
 
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_32px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

@@ -5,7 +5,7 @@ export async function getGiftSeoProducts(filter: { recipient?: string; budget?: 
   return products.filter((product) => {
     if (filter.recipient && !product.recipients?.includes(filter.recipient)) return false;
     if (filter.budget && product.budget !== filter.budget) return false;
-    if (filter.trend && !`${product.tags?.join(' ')} ${product.title}`.toLowerCase().match(/trend|viral|hit|хит/)) return false;
+    if (filter.trend && !`${product.tags?.join(' ')} ${product.title} ${product.trendLabel || ''}`.toLowerCase().match(/trend|viral|hit|хит|tiktok|популяр/)) return false;
     return true;
   }).slice(0, 24);
 }

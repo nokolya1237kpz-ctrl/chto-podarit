@@ -2,8 +2,12 @@ import type { Product } from '@/types/product';
 
 export function cleanupTitle(title?: string) {
   return (title || '')
+    .normalize('NFKD')
     .replace(/\s+/g, ' ')
-    .replace(/\s*[|/\\-]\s*(купить|цена|доставка).*$/i, '')
+    .replace(/[^\p{L}\p{N}\s.+-]/gu, ' ')
+    .replace(/\b(ozon|wildberries|wb|aliexpress|яндекс\s*маркет|dns|citilink|мвидео|м\.видео|эльдорадо|megamarket)\b/gi, ' ')
+    .replace(/\s*[|/\\-]\s*(купить|цена|доставка|официальный магазин).*$/i, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -20,6 +24,11 @@ export function normalizeMarketplace(value?: string) {
   if (normalized.includes('wildberries') || normalized === 'wb' || normalized.includes('wb.ru')) return 'wildberries';
   if (normalized.includes('ali')) return 'aliexpress';
   if (normalized.includes('yandex')) return 'yandex_market';
+  if (normalized.includes('dns')) return 'dns_shop';
+  if (normalized.includes('citilink')) return 'citilink';
+  if (normalized.includes('mega')) return 'megamarket';
+  if (normalized.includes('mvideo') || normalized.includes('мвидео') || normalized.includes('м.видео')) return 'mvideo';
+  if (normalized.includes('eldorado') || normalized.includes('эльдорадо')) return 'eldorado';
   return normalized || 'other';
 }
 
@@ -46,27 +55,30 @@ export function getDedupeKey(input: Partial<Product>) {
 function tokenize(title?: string) {
   return cleanupTitle(title)
     .toLowerCase()
+    .replace(/([a-zа-я]+)-?(\d+)/gi, '$1$2')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .split(/\s+/)
     .filter((token) => token.length > 2)
-    .filter((token) => !['для', 'with', 'and', 'the', 'купить', 'цена'].includes(token));
+    .filter((token) => !['для', 'with', 'and', 'the', 'купить', 'цена', 'товар', 'новый', 'оригинал'].includes(token));
 }
 
 function extractModel(title?: string) {
-  return tokenize(title).find((token) => /[a-zа-я]+\d+|\d+[a-zа-я]+/i.test(token));
+  const joined = tokenize(title).join(' ');
+  const compact = joined.replace(/\s+/g, '');
+  return compact.match(/[a-zа-я]{1,8}\d{2,}[a-zа-я0-9]*/i)?.[0] || tokenize(title).find((token) => /[a-zа-я]+\d+|\d+[a-zа-я]+/i.test(token));
 }
 
 function extractBrand(title?: string) {
-  return tokenize(title)[0] || '';
+  const tokens = tokenize(title);
+  const knownBrands = ['sony', 'apple', 'samsung', 'xiaomi', 'huawei', 'honor', 'lg', 'bosch', 'philips', 'redmond', 'tefal', 'dyson', 'jbl'];
+  return tokens.find((token) => knownBrands.includes(token)) || tokens[0] || '';
 }
 
 function hasVariantConflict(a?: string, b?: string) {
-  const colors = ['black', 'white', 'red', 'blue', 'green', 'черный', 'чёрный', 'белый', 'красный', 'синий', 'зелёный'];
   const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', '128gb', '256gb', '512gb', '1tb'];
   const at = tokenize(a);
   const bt = tokenize(b);
-  const variantWords = [...colors, ...sizes];
-  return variantWords.some((word) => (at.includes(word) || bt.includes(word)) && at.includes(word) !== bt.includes(word));
+  return sizes.some((word) => (at.includes(word) || bt.includes(word)) && at.includes(word) !== bt.includes(word));
 }
 
 export function calculateSimilarity(a?: string, b?: string) {
@@ -74,7 +86,11 @@ export function calculateSimilarity(a?: string, b?: string) {
   const right = new Set(tokenize(b));
   if (left.size === 0 || right.size === 0) return 0;
   const intersection = [...left].filter((token) => right.has(token)).length;
-  return intersection / Math.max(left.size, right.size);
+  const overlap = intersection / Math.max(left.size, right.size);
+  const leftModel = extractModel(a);
+  const rightModel = extractModel(b);
+  if (leftModel && rightModel && leftModel === rightModel) return Math.max(overlap, 0.92);
+  return overlap;
 }
 
 export function detectSameProduct(a: Partial<Product>, b: Partial<Product>) {
@@ -87,6 +103,7 @@ export function detectSameProduct(a: Partial<Product>, b: Partial<Product>) {
   const aModel = extractModel(a.title);
   const bModel = extractModel(b.title);
   if (aBrand && bBrand && aModel && bModel && aBrand === bBrand && aModel === bModel) return true;
+  if (aModel && bModel && aModel === bModel) return true;
   return calculateSimilarity(a.title, b.title) > 0.72;
 }
 

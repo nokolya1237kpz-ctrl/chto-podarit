@@ -29,9 +29,14 @@ export async function GET(request: NextRequest) {
     diagnostics.push({ provider: 'epn', query, stage: 'fetch', status: 'warning', error: error instanceof Error ? error.message : String(error), details: (error as any)?.details });
   }
 
-  for (const id of ['ozon', 'aliexpress', 'yandex_market']) {
+  for (const id of ['ozon', 'aliexpress', 'yandex_market', 'dns_shop', 'citilink', 'megamarket', 'mvideo', 'eldorado']) {
     try {
-      const products = await providers[id].searchProducts({ query, limit: 3 });
+      const provider: any = providers[id];
+      const result = provider?.searchWithDiagnostics
+        ? await provider.searchWithDiagnostics({ query, limit: 3 })
+        : { products: await provider.searchProducts({ query, limit: 3 }), diagnostics: [] };
+      const products = result.products || [];
+      diagnostics.push(...(result.diagnostics || []));
       diagnostics.push({ provider: id, query, stage: 'normalize', status: products.length ? 'success' : 'warning', normalized: products.length, error: products.length ? undefined : 'Источник ограничил публичный парсинг или требует JS/API' });
       samples[id] = products;
     } catch (error) {

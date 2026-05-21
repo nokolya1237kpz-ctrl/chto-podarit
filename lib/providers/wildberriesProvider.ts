@@ -2,9 +2,14 @@ import type { ProductProvider, ProductSearchFilters } from './types';
 import type { Product } from '@/types/product';
 import { normalizeAffiliateProduct } from '@/lib/affiliate';
 import { countQuality, diagnostic, type ProviderDiagnostic, type ProviderSearchResult } from '@/lib/diagnostics/providerDiagnostics';
-import { ASCII_USER_AGENT, sanitizeHeaders } from '@/lib/httpHeaders';
+import { fetchWithAdaptiveRetry, getJsonHeaders } from '@/lib/providerHttp';
 
 const WB_VERSIONS = ['v18', 'v17', 'v16', 'v15', 'v14', 'v13'];
+const WB_ENDPOINTS = [
+  'https://search.wb.ru/exactmatch/ru/common/{version}/search?query={query}&resultset=catalog&sort=popular&spp=30',
+  'https://search.wb.ru/exactmatch/ru/common/{version}/search?appType=1&curr=rub&dest=-1257786&query={query}&resultset=catalog&sort=popular&spp=30',
+  'https://search.wb.ru/exactmatch/ru/common/{version}/search?appType=1&curr=rub&query={query}&resultset=catalog&sort=popular&spp=30',
+];
 
 export function buildWildberriesImageUrl(productId: number) {
   const id = Number(productId);
@@ -16,7 +21,19 @@ export function buildWildberriesImageUrl(productId: number) {
 }
 
 function buildWbSearchUrl(query: string, version = 'v18') {
-  return `https://search.wb.ru/exactmatch/ru/common/${version}/search?query=${encodeURIComponent(query)}&resultset=catalog&sort=popular&spp=30`;
+  return WB_ENDPOINTS[0].replace('{version}', version).replace('{query}', encodeURIComponent(query));
+}
+
+function buildWbUrls(query: string) {
+  return WB_VERSIONS.flatMap((version) => WB_ENDPOINTS.map((template) => template.replace('{version}', version).replace('{query}', encodeURIComponent(query))));
+}
+
+function wbReason(status?: number, error?: string) {
+  if (status === 429) return 'rate_limit';
+  if (status === 403) return 'blocked';
+  if (status && status >= 500) return 'server_error';
+  if (String(error || '').toLowerCase().includes('timeout')) return 'timeout';
+  return 'unknown';
 }
 
 function normalizeWbProduct(item: any, query?: string): Product {
@@ -61,15 +78,13 @@ export class WildberriesProvider implements ProductProvider {
     const diagnostics: ProviderDiagnostic[] = [];
     diagnostics.push(diagnostic({ provider: this.id, query, stage: 'build_url', status: 'success', url: buildWbSearchUrl(query) }));
 
-    for (const version of WB_VERSIONS) {
-      const url = buildWbSearchUrl(query, version);
+    for (const url of buildWbUrls(query)) {
       try {
-        const { headers, warnings } = sanitizeHeaders({
-          Accept: 'application/json',
-          'User-Agent': ASCII_USER_AGENT,
-          'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
-        });
-        warnings.forEach((warning) => {
+        const result = await fetchWithAdaptiveRetry(url, {
+          headers: getJsonHeaders(),
+          redirect: 'follow',
+        }, { maxRetries: 2, timeoutMs: 9000 });
+        result.warnings.forEach((warning) => {
           diagnostics.push(diagnostic({
             provider: this.id,
             query,
@@ -80,9 +95,12 @@ export class WildberriesProvider implements ProductProvider {
             details: warning,
           }));
         });
-        const response = await fetch(url, {
-          headers,
-        });
+        if (!result.response) {
+          diagnostics.push(diagnostic({ provider: this.id, query, url, stage: 'fetch', status: 'error', error: result.error || result.reason, details: { reason: result.reason, attempts: result.attempts } }));
+          continue;
+        }
+        const response = result.response;
+        const reason = wbReason(response.status);
         diagnostics.push(diagnostic({
           provider: this.id,
           query,
@@ -90,13 +108,14 @@ export class WildberriesProvider implements ProductProvider {
           stage: 'fetch',
           status: response.ok ? 'success' : 'warning',
           httpStatus: response.status,
-          error: [403, 429].includes(response.status) ? 'Источник временно ограничил публичный запрос' : undefined,
+          error: response.ok ? undefined : 'Источник временно ограничил публичный запрос',
+          details: { reason, attempts: result.attempts },
         }));
         if (!response.ok) continue;
 
         const body = await response.json();
         const raw = body?.data?.products || [];
-        diagnostics.push(diagnostic({ provider: this.id, query, url, stage: 'parse_json', status: 'success', foundRaw: raw.length, details: { version } }));
+        diagnostics.push(diagnostic({ provider: this.id, query, url, stage: 'parse_json', status: 'success', foundRaw: raw.length }));
 
         const products: Product[] = raw.slice(0, Math.min(filters.limit || 20, 20)).map((item: any) => normalizeWbProduct(item, query));
         const quality = countQuality(products);

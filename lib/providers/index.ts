@@ -9,6 +9,11 @@ import { WildberriesProvider } from './wildberriesProvider';
 import { DirectApiProvider } from './directApiProvider';
 import { FeedProvider } from './feedProvider';
 import { ParserProvider } from './parserProvider';
+import { DnsShopProvider } from './dnsShopProvider';
+import { CitilinkProvider } from './citilinkProvider';
+import { MegamarketProvider } from './megamarketProvider';
+import { MvideoProvider } from './mvideoProvider';
+import { EldoradoProvider } from './eldoradoProvider';
 import type { ProductProvider } from './types';
 
 export const providers: Record<string, ProductProvider> = {
@@ -23,6 +28,11 @@ export const providers: Record<string, ProductProvider> = {
   direct_api: new DirectApiProvider(),
   feed: new FeedProvider(),
   parser: new ParserProvider(),
+  dns_shop: new DnsShopProvider(),
+  citilink: new CitilinkProvider(),
+  megamarket: new MegamarketProvider(),
+  mvideo: new MvideoProvider(),
+  eldorado: new EldoradoProvider(),
 };
 
 export function getProviderById(id: string): ProductProvider | undefined {

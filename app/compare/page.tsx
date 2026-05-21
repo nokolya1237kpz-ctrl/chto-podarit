@@ -36,6 +36,8 @@ function CompareContent() {
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   async function runSearch(nextQuery = query) {
     if (!nextQuery.trim()) {
@@ -53,6 +55,7 @@ function CompareContent() {
       const res = await fetch(`/api/compare/search?${params.toString()}`);
       const body = await res.json();
       setData(body);
+      saveSearch(nextQuery);
       if (!body.success) setMessage(body.error || 'Ошибка поиска');
     } finally {
       setLoading(false);
@@ -66,6 +69,8 @@ function CompareContent() {
   }
 
   useEffect(() => {
+    setFavorites(JSON.parse(localStorage.getItem('favoriteProducts') || '[]'));
+    setWatchlist(JSON.parse(localStorage.getItem('priceWatchlist') || '[]'));
     const urlQuery = searchParams.get('q') || '';
     if (!urlQuery) return;
     setQuery(urlQuery);
@@ -95,11 +100,39 @@ function CompareContent() {
 
   const groups = useMemo(() => data?.groups || [], [data]);
 
+  function saveSearch(value: string) {
+    const stored = JSON.parse(localStorage.getItem('savedCompareSearches') || '[]') as string[];
+    const next = [value, ...stored.filter((item) => item !== value)].slice(0, 20);
+    localStorage.setItem('savedCompareSearches', JSON.stringify(next));
+  }
+
+  function toggleStored(key: 'favoriteProducts' | 'priceWatchlist', product: Product) {
+    const id = String(product.id || product.externalProductId || product.originalUrl);
+    const current = JSON.parse(localStorage.getItem(key) || '[]') as string[];
+    const next = current.includes(id) ? current.filter((item) => item !== id) : [id, ...current].slice(0, 200);
+    localStorage.setItem(key, JSON.stringify(next));
+    if (key === 'favoriteProducts') setFavorites(next);
+    if (key === 'priceWatchlist') setWatchlist(next);
+    localStorage.setItem(`priceSnapshot:${id}`, JSON.stringify({
+      price: product.price,
+      oldPrice: product.oldPrice,
+      savedAt: new Date().toISOString(),
+      title: product.title,
+    }));
+  }
+
+  function priceNote(product: Product) {
+    const id = String(product.id || product.externalProductId || product.originalUrl);
+    const snapshot = JSON.parse(localStorage.getItem(`priceSnapshot:${id}`) || 'null');
+    if (!snapshot?.price || !product.price || snapshot.price === product.price) return 'Следим за ценой';
+    return product.price < snapshot.price ? 'Цена упала' : 'Цена выросла';
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 pb-20 pt-28">
-        <section className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6">
+      <main className="mx-auto max-w-7xl overflow-x-hidden px-4 pb-20 pt-28">
+        <section className="sticky top-24 z-20 rounded-[2rem] border border-white/10 bg-slate-900/90 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:p-6">
           <p className="text-sm uppercase tracking-[0.3em] text-purple-300">Compare</p>
           <h1 className="mt-3 text-4xl font-bold">Сравнение цен</h1>
           <form onSubmit={search} className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_140px_140px_160px_auto]">
@@ -129,6 +162,11 @@ function CompareContent() {
               ))}
             </div>
           ) : null}
+          {data && Object.values(data.sourceStats || {}).some((stat) => stat.status === 'limited') ? (
+            <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
+              Часть источников временно ограничила запросы. Показываем доступные локальные и внешние результаты.
+            </div>
+          ) : null}
           {data?.diagnostics?.length ? (
             <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4">
               <summary className="cursor-pointer text-sm font-semibold">Source stats и diagnostics</summary>
@@ -150,27 +188,41 @@ function CompareContent() {
                 {group.items.map((product, index) => {
                   const url = product.affiliateUrl || product.originalUrl || '#';
                   return (
-                    <article key={`${group.id}-${product.id}-${index}`} className="grid gap-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 md:grid-cols-[120px_1fr_auto]">
+                    <article key={`${group.id}-${product.id}-${index}`} className="grid min-w-0 gap-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-300/25 md:grid-cols-[140px_minmax(0,1fr)_auto]">
                       <div className="flex h-28 items-center justify-center rounded-2xl bg-white">
                         {product.imageUrl ? <img src={product.imageUrl} alt={product.title} className="h-full w-full object-contain p-2" /> : null}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex flex-wrap gap-2">
                           {index === 0 ? <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">Лучшая цена</span> : null}
+                          {(product.trendScore || 0) > 7 || product.tags?.some((tag) => /tiktok|viral|trend|хит/i.test(tag)) ? <span className="rounded-full bg-pink-500/15 px-3 py-1 text-xs font-semibold text-pink-100">Тренд TikTok</span> : null}
+                          {(product.wowRating || 0) >= 8 ? <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-100">Популярно</span> : null}
                           {product.affiliateUrl ? <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs font-semibold text-purple-100">Партнёрская ссылка</span> : null}
                           <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-cyan-100">{product.marketplace}</span>
                           <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">Быстрая доставка</span>
+                          <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">★ {product.wowRating || 7}/10</span>
                         </div>
                         <h3 className="mt-3 text-lg font-semibold">{product.title}</h3>
                         <p className="mt-2 line-clamp-2 text-sm text-slate-400">{product.description || 'Описание появится после импорта.'}</p>
                       </div>
-                      <div className="flex flex-col justify-center gap-3 md:items-end">
+                      <div className="flex flex-col justify-center gap-3 md:min-w-48 md:items-end">
                         <div className="text-2xl font-bold">{Math.round(product.price || 0).toLocaleString('ru-RU')} ₽</div>
                         {product.oldPrice ? <div className="text-sm text-slate-500 line-through">{Math.round(product.oldPrice).toLocaleString('ru-RU')} ₽</div> : null}
-                        <a onClick={() => logClick(product)} href={url} target="_blank" rel="noopener noreferrer" className="rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-5 py-3 text-sm font-semibold">
+                        {product.oldPrice && product.price ? <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">-{Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}%</div> : null}
+                        {watchlist.includes(String(product.id || product.externalProductId || product.originalUrl)) ? <div className="text-xs text-cyan-200">{priceNote(product)}</div> : null}
+                        <a onClick={() => logClick(product)} href={url} target="_blank" rel="noopener noreferrer" className="w-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-5 py-3 text-center text-sm font-semibold md:w-auto">
                           Купить дешевле
                         </a>
-                        <button onClick={() => importProduct(product)} className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100">
+                        <a onClick={() => logClick(product)} href={product.originalUrl || url} target="_blank" rel="noopener noreferrer" className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2 text-center text-sm font-semibold text-slate-100 md:w-auto">
+                          Открыть товар
+                        </a>
+                        <button onClick={() => toggleStored('favoriteProducts', product)} className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100 md:w-auto">
+                          {favorites.includes(String(product.id || product.externalProductId || product.originalUrl)) ? 'В избранном' : '❤️ Избранное'}
+                        </button>
+                        <button onClick={() => toggleStored('priceWatchlist', product)} className="w-full rounded-full border border-cyan-300/20 bg-cyan-400/10 px-5 py-2 text-sm font-semibold text-cyan-100 md:w-auto">
+                          Следить за ценой
+                        </button>
+                        <button onClick={() => importProduct(product)} className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100 md:w-auto">
                           Добавить в товары
                         </button>
                       </div>

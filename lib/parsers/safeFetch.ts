@@ -1,6 +1,6 @@
 import { getCachedUrl, setCachedUrl } from './cache';
 import { supabaseAdmin } from '@/lib/supabase';
-import { ASCII_USER_AGENT, sanitizeHeaders } from '@/lib/httpHeaders';
+import { fetchWithAdaptiveRetry, getBrowserHeaders } from '@/lib/providerHttp';
 
 const allowedDomains = [
   'ozon.ru',
@@ -13,6 +13,16 @@ const allowedDomains = [
   'www.aliexpress.ru',
   'market.yandex.ru',
   'www.sportmaster.ru',
+  'dns-shop.ru',
+  'www.dns-shop.ru',
+  'citilink.ru',
+  'www.citilink.ru',
+  'megamarket.ru',
+  'www.megamarket.ru',
+  'mvideo.ru',
+  'www.mvideo.ru',
+  'eldorado.ru',
+  'www.eldorado.ru',
 ];
 
 let lastRequestAt = 0;
@@ -95,34 +105,19 @@ export async function safeFetch(url: string, options: { ttlMs?: number; crawlDel
   state.count += 1;
   domainState.set(domain, state);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 8000);
-  let response: Response;
-  try {
-    const { headers, warnings } = sanitizeHeaders({
-      'User-Agent': ASCII_USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
-    });
-    if (warnings.length) {
-      console.warn('safeFetch sanitized non-ASCII headers', warnings);
-    }
-    response = await fetch(url, {
-      headers,
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-  } catch (error) {
-    clearTimeout(timeout);
-    throw error;
-  }
-  clearTimeout(timeout);
+  const result = await fetchWithAdaptiveRetry(url, {
+    headers: getBrowserHeaders(),
+    redirect: 'follow',
+  }, { maxRetries: 2, timeoutMs: options.timeoutMs ?? 8000 });
+  if (result.warnings.length) console.warn('safeFetch sanitized headers', result.warnings);
+  if (!result.response) throw new Error(`Fetch failed: ${result.reason}${result.error ? ` (${result.error})` : ''}`);
+  const response = result.response;
 
   if (!response.ok) {
     if ([403, 429].includes(response.status)) {
       state.status = 'limited';
       domainState.set(domain, state);
-      throw new Error(`Source status limited: ${response.status}`);
+      throw new Error(`Source status limited: ${response.status} (${result.reason})`);
     }
     throw new Error(`Fetch failed: ${response.status}`);
   }

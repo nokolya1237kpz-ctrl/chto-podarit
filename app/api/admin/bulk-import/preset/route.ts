@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
           } else {
             importedActive += 1;
           }
+        } else {
+          skippedDuplicate += 1;
+          querySkippedDuplicate += 1;
         }
       } catch (error) {
         errors += 1;

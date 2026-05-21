@@ -7,7 +7,8 @@ import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormali
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';
 
-const marketplacePriority = ['epn', 'wildberries', 'ozon', 'aliexpress', 'yandex_market', 'feed', 'manual'];
+const marketplacePriority = ['epn', 'wildberries', 'ozon', 'dns_shop', 'citilink', 'mvideo', 'eldorado', 'megamarket', 'aliexpress', 'yandex_market', 'feed', 'manual'];
+const externalProviderIds = ['ozon', 'aliexpress', 'yandex_market', 'dns_shop', 'citilink', 'megamarket', 'mvideo', 'eldorado'];
 
 function toCompareProduct(product: any, sourceProvider?: string): Product {
   return {
@@ -83,13 +84,20 @@ export async function GET(request: NextRequest) {
       diagnostics.push({ provider: 'epn', query, stage: 'fetch', status: 'warning', error: sourceStats.epn.error, details: (error as any)?.details });
     }
 
-    for (const id of ['ozon', 'aliexpress', 'yandex_market']) {
+    for (const id of externalProviderIds) {
       try {
-        const provider = providers[id];
-        const results = provider ? await provider.searchProducts({ query, limit: 20 }) : [];
+        const provider: any = providers[id];
+        const result = provider?.searchWithDiagnostics
+          ? await provider.searchWithDiagnostics({ query, limit: 10 })
+          : { products: provider ? await provider.searchProducts({ query, limit: 10 }) : [], diagnostics: [] };
+        const results: Product[] = result.products || [];
         all.push(...results.map((product) => toCompareProduct(product, id)));
-        sourceStats[id] = { count: results.length, status: 'active' };
-        diagnostics.push({ provider: id, query, stage: 'normalize', status: results.length ? 'success' : 'warning', normalized: results.length, error: results.length ? undefined : 'Источник ограничил публичный парсинг или требует JS/API' });
+        diagnostics.push(...(result.diagnostics || []));
+        sourceStats[id] = {
+          count: results.length,
+          status: results.length ? 'active' : (result.diagnostics || []).some((item: ProviderDiagnostic) => item.status === 'warning') ? 'limited' : 'error',
+          error: results.length ? undefined : 'Источник временно ограничил запросы',
+        };
       } catch (error) {
         sourceStats[id] = { count: 0, status: String(error).includes('limited') ? 'limited' : 'error', error: error instanceof Error ? error.message : String(error) };
         diagnostics.push({ provider: id, query, stage: 'fetch', status: 'error', error: sourceStats[id].error });
