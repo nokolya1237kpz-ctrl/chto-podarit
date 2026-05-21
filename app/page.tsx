@@ -92,6 +92,26 @@ export default async function Home() {
             ))}
           </section>
 
+          <section className="overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-slate-950/82 p-5 shadow-[0_32px_110px_rgba(6,182,212,0.14)] backdrop-blur-2xl sm:p-7">
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Price compare</p>
+                <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Сравните цены перед покупкой</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Введите название товара — мы проверим доступные источники и покажем, где дешевле.</p>
+              </div>
+              <form action="/compare" className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  name="q"
+                  placeholder="Например: наушники Sony, мультиварка, помада"
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/60"
+                />
+                <button className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300">
+                  Найти где дешевле
+                </button>
+              </form>
+            </div>
+          </section>
+
           {/* How It Works */}
           <section id="how-it-works" className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 w-full max-w-full">
             {[

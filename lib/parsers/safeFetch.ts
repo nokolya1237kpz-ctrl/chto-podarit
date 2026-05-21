@@ -1,5 +1,6 @@
 import { getCachedUrl, setCachedUrl } from './cache';
 import { supabaseAdmin } from '@/lib/supabase';
+import { ASCII_USER_AGENT, sanitizeHeaders } from '@/lib/httpHeaders';
 
 const allowedDomains = [
   'ozon.ru',
@@ -98,11 +99,16 @@ export async function safeFetch(url: string, options: { ttlMs?: number; crawlDel
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 8000);
   let response: Response;
   try {
+    const { headers, warnings } = sanitizeHeaders({
+      'User-Agent': ASCII_USER_AGENT,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+    });
+    if (warnings.length) {
+      console.warn('safeFetch sanitized non-ASCII headers', warnings);
+    }
     response = await fetch(url, {
-      headers: {
-        'User-Agent': 'ChtoPodaritBot/1.0 (+https://что-подарить.online/contacts)',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
+      headers,
       redirect: 'follow',
       signal: controller.signal,
     });

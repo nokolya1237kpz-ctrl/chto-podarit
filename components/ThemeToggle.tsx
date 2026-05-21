@@ -2,21 +2,24 @@
 import React, { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'light'|'dark'>(() => {
-    if (typeof window === 'undefined') return 'light';
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState<'light'|'dark'>('dark');
 
   useEffect(() => {
-    if (theme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (storedTheme) setTheme(storedTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.body.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
-    <button onClick={toggle} aria-label="Toggle theme" className="p-2 rounded-md bg-white/10 hover:bg-white/20 text-white">
-      {theme === 'dark' ? '☀️' : '🌙'}
+    <button onClick={toggle} aria-label="Toggle theme" className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+      {theme === 'dark' ? 'Light' : 'Dark'}
     </button>
   );
 }

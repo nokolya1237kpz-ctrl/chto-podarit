@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import type { Product } from '@/types/product';
@@ -18,6 +19,15 @@ type SearchResponse = {
 };
 
 export default function ComparePage() {
+  return (
+    <Suspense fallback={<CompareShellFallback />}>
+      <CompareContent />
+    </Suspense>
+  );
+}
+
+function CompareContent() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [marketplace, setMarketplace] = useState('');
   const [sort, setSort] = useState('price_asc');
@@ -27,11 +37,14 @@ export default function ComparePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  async function search(event?: React.FormEvent) {
-    event?.preventDefault();
+  async function runSearch(nextQuery = query) {
+    if (!nextQuery.trim()) {
+      setMessage('Введите название товара для сравнения');
+      return;
+    }
     setLoading(true);
     setMessage('');
-    const params = new URLSearchParams({ q: query, sort });
+    const params = new URLSearchParams({ q: nextQuery, sort });
     if (marketplace) params.set('marketplace', marketplace);
     if (minPrice) params.set('minPrice', minPrice);
     if (maxPrice) params.set('maxPrice', maxPrice);
@@ -45,6 +58,20 @@ export default function ComparePage() {
       setLoading(false);
     }
   }
+
+  async function search(event?: React.FormEvent) {
+    event?.preventDefault();
+    window.history.replaceState(null, '', `/compare?q=${encodeURIComponent(query)}`);
+    await runSearch(query);
+  }
+
+  useEffect(() => {
+    const urlQuery = searchParams.get('q') || '';
+    if (!urlQuery) return;
+    setQuery(urlQuery);
+    void runSearch(urlQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function importProduct(product: Product) {
     setMessage('');
@@ -75,7 +102,7 @@ export default function ComparePage() {
         <section className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6">
           <p className="text-sm uppercase tracking-[0.3em] text-purple-300">Compare</p>
           <h1 className="mt-3 text-4xl font-bold">Сравнение цен</h1>
-          <form onSubmit={search} className="mt-6 grid gap-3 lg:grid-cols-[1fr_160px_140px_140px_160px_auto]">
+          <form onSubmit={search} className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_140px_140px_160px_auto]">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Наушники, косметика, автоаксессуары..." className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3" />
             <select value={marketplace} onChange={(event) => setMarketplace(event.target.value)} className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3">
               <option value="">Все</option>
@@ -104,8 +131,8 @@ export default function ComparePage() {
           ) : null}
           {data?.diagnostics?.length ? (
             <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4">
-              <summary className="cursor-pointer text-sm font-semibold">Diagnostics</summary>
-              <pre className="mt-3 max-h-72 overflow-auto text-xs text-slate-300">{JSON.stringify(data.diagnostics, null, 2)}</pre>
+              <summary className="cursor-pointer text-sm font-semibold">Source stats и diagnostics</summary>
+              <pre className="mt-3 max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words text-xs text-slate-300">{JSON.stringify({ sourceStats: data.sourceStats, diagnostics: data.diagnostics }, null, 2)}</pre>
             </details>
           ) : null}
         </section>
@@ -153,8 +180,25 @@ export default function ComparePage() {
               </div>
             </div>
           ))}
-          {!loading && data && groups.length === 0 ? <div className="rounded-3xl border border-white/10 p-8 text-center text-slate-400">Ничего не найдено</div> : null}
+          {!loading && data && groups.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 text-center text-slate-300">
+              <p className="text-lg font-semibold text-white">Пока ничего не найдено</p>
+              <p className="mt-2 text-sm text-slate-400">Если внешний источник ограничил запрос, причина будет в diagnostics. Локальные товары появятся здесь, когда совпадут с запросом.</p>
+            </div>
+          ) : null}
         </section>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function CompareShellFallback() {
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      <Header />
+      <main className="mx-auto max-w-7xl px-4 pb-20 pt-28">
+        <div className="h-56 animate-pulse rounded-[2rem] bg-white/5" />
       </main>
       <Footer />
     </div>

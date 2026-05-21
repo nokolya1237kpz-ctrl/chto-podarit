@@ -63,7 +63,12 @@ export async function GET(request: NextRequest) {
         : { products: await wbProvider.searchProducts({ query, limit: 20 }), diagnostics: [] };
       all.push(...wbResult.products.map((product: Product) => toCompareProduct(product, 'wildberries')));
       diagnostics.push(...wbResult.diagnostics);
-      sourceStats.wildberries = { count: wbResult.products.length, status: 'active' };
+      const wbLimited = wbResult.diagnostics?.some((item: ProviderDiagnostic) => item.httpStatus === 403 || item.httpStatus === 429 || String(item.error || '').includes('limited'));
+      sourceStats.wildberries = {
+        count: wbResult.products.length,
+        status: wbResult.products.length ? 'active' : wbLimited ? 'limited' : 'error',
+        error: wbResult.products.length ? undefined : wbLimited ? 'Источник временно ограничил публичный запрос' : 'Wildberries не вернул товары',
+      };
     } catch (error) {
       sourceStats.wildberries = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
     }

@@ -1,3 +1,5 @@
+import { ASCII_PRODUCT_METADATA_USER_AGENT, sanitizeHeaders } from '@/lib/httpHeaders';
+
 export function resolveRelativeUrl(url: string, baseUrl: string): string {
   try {
     return new URL(url, baseUrl).href;
@@ -61,11 +63,12 @@ export function extractPageMetadata(html: string, baseUrl: string) {
 
 export async function fetchProductImageFromUrl(url: string): Promise<string | null> {
   try {
+    const { headers } = sanitizeHeaders({
+      'User-Agent': ASCII_PRODUCT_METADATA_USER_AGENT,
+      Accept: 'text/html,image/*,*/*;q=0.8',
+    });
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ProductMetadataBot/1.0; +https://что-подарить.online)',
-        Accept: 'text/html,image/*,*/*;q=0.8',
-      },
+      headers,
       redirect: 'follow',
     });
 
@@ -84,11 +87,12 @@ export async function fetchProductImageFromUrl(url: string): Promise<string | nu
 
 export async function fetchPageMetadata(url: string) {
   try {
+    const { headers } = sanitizeHeaders({
+      'User-Agent': ASCII_PRODUCT_METADATA_USER_AGENT,
+      Accept: 'text/html,image/*,*/*;q=0.8',
+    });
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ProductMetadataBot/1.0; +https://что-подарить.online)',
-        Accept: 'text/html,image/*,*/*;q=0.8',
-      },
+      headers,
       redirect: 'follow',
     });
 

@@ -2,6 +2,7 @@ import type { ProductProvider, ProductSearchFilters } from './types';
 import type { Product } from '@/types/product';
 import { normalizeAffiliateProduct } from '@/lib/affiliate';
 import { countQuality, diagnostic, type ProviderDiagnostic, type ProviderSearchResult } from '@/lib/diagnostics/providerDiagnostics';
+import { ASCII_USER_AGENT, sanitizeHeaders } from '@/lib/httpHeaders';
 
 const WB_VERSIONS = ['v18', 'v17', 'v16', 'v15', 'v14', 'v13'];
 
@@ -63,13 +64,34 @@ export class WildberriesProvider implements ProductProvider {
     for (const version of WB_VERSIONS) {
       const url = buildWbSearchUrl(query, version);
       try {
-        const response = await fetch(url, {
-          headers: {
-            Accept: 'application/json',
-            'User-Agent': 'ChtoPodaritBot/1.0 (+https://что-подарить.online/contacts)',
-          },
+        const { headers, warnings } = sanitizeHeaders({
+          Accept: 'application/json',
+          'User-Agent': ASCII_USER_AGENT,
+          'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
         });
-        diagnostics.push(diagnostic({ provider: this.id, query, url, stage: 'fetch', status: response.ok ? 'success' : 'warning', httpStatus: response.status }));
+        warnings.forEach((warning) => {
+          diagnostics.push(diagnostic({
+            provider: this.id,
+            query,
+            url,
+            stage: 'fetch',
+            status: 'warning',
+            error: 'Non-ASCII header value was sanitized before fetch',
+            details: warning,
+          }));
+        });
+        const response = await fetch(url, {
+          headers,
+        });
+        diagnostics.push(diagnostic({
+          provider: this.id,
+          query,
+          url,
+          stage: 'fetch',
+          status: response.ok ? 'success' : 'warning',
+          httpStatus: response.status,
+          error: [403, 429].includes(response.status) ? 'Источник временно ограничил публичный запрос' : undefined,
+        }));
         if (!response.ok) continue;
 
         const body = await response.json();
