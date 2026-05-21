@@ -13,7 +13,10 @@ export default async function AutoPartsPage({ searchParams }: { searchParams: Pr
   const q = (params.q || '').toLowerCase();
   const products = isSupabaseConfigured() ? await getActiveProducts() : [];
   const autoProducts = products
-    .filter((product) => `${product.title} ${product.description || ''} ${product.tags?.join(' ')}`.toLowerCase().includes('авто') || `${product.title} ${product.description || ''}`.toLowerCase().includes(q))
+    .filter((product) => {
+      const text = `${product.title} ${product.description || ''} ${product.tags?.join(' ')}`.toLowerCase();
+      return text.includes('авто') || Boolean(q && text.includes(q));
+    })
     .sort((a, b) => a.price - b.price);
 
   return (

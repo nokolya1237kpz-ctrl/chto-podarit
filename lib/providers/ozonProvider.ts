@@ -1,17 +1,18 @@
 import type { ProductProvider, ProductSearchFilters } from './types';
 import type { Product } from '@/types/product';
 import { normalizeAffiliateProduct } from '@/lib/affiliate';
+import { makeSearchUrl, parseSearchPageAsSingleProduct } from './marketplaceSearch';
 
 export class OzonProvider implements ProductProvider {
   id = 'ozon';
-  name = 'Ozon API';
+  name = 'Ozon';
+  searchUrlTemplate = 'https://www.ozon.ru/search/?text={query}';
 
   async searchProducts(filters: ProductSearchFilters): Promise<Product[]> {
     const clientId = process.env.OZON_CLIENT_ID;
     const apiKey = process.env.OZON_API_KEY;
     if (!clientId || !apiKey) {
-      console.warn('Ozon API not configured');
-      return [];
+      return parseSearchPageAsSingleProduct(makeSearchUrl(this.searchUrlTemplate, filters.query), 'ozon', filters.query);
     }
 
     try {
@@ -21,6 +22,10 @@ export class OzonProvider implements ProductProvider {
       console.error('Error searching Ozon API:', error);
       return [];
     }
+  }
+
+  search(filters: ProductSearchFilters) {
+    return this.searchProducts(filters);
   }
 
   async getProductPrice(_productId: string): Promise<number | null> {

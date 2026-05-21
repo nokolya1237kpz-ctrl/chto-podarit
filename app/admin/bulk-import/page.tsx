@@ -12,6 +12,10 @@ const defaultCategories = [
   'Спорт',
   'Товары для авто',
   'Автоаксессуары',
+  'Игрушки',
+  'Дом и уют',
+  'Гаджеты',
+  'Книги',
 ];
 
 export default function BulkImportPage() {
@@ -76,6 +80,13 @@ export default function BulkImportPage() {
                 className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
               >
                 Hot/trending
+              </button>
+              <button
+                disabled={loading === '100 товаров'}
+                onClick={() => runImport('100 товаров', '/api/admin/bulk-import/categories', { categories: defaultCategories, perCategory: 9 })}
+                className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+              >
+                Импортировать 100 товаров
               </button>
             </div>
           </div>

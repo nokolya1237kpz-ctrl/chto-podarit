@@ -1,0 +1,8 @@
+import GiftSeoPage from '@/components/GiftSeoPage';
+import { getGiftSeoProducts } from '@/lib/giftSeo';
+
+export const metadata = { title: 'Подарки до 1000 рублей', description: 'Недорогие подарки до 1000 ₽.' };
+
+export default async function Page() {
+  return <GiftSeoPage title="Подарки до 1000 ₽" description="Бюджетные идеи подарков с быстрым переходом к покупке." products={await getGiftSeoProducts({ budget: 'до 1000 ₽' })} />;
+}
