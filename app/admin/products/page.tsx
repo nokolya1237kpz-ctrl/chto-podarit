@@ -142,6 +142,29 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function handleMarkTrend(product: Product) {
+    try {
+      const tags = Array.from(new Set([...(product.tags || []), 'trend', 'viral']));
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...product,
+          tags,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        setProducts((prev) => prev.map((item) => item.id === product.id ? data.data : item));
+      } else {
+        setError(data.error || 'Не удалось пометить трендом');
+      }
+    } catch (err) {
+      setError('Сетевая ошибка');
+      console.error(err);
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/admin/logout', { method: 'POST' });
     router.push('/admin');
@@ -292,6 +315,14 @@ export default function AdminProductsPage() {
                           className="text-amber-300 hover:text-amber-200"
                         >
                           В архив
+                        </button>
+                      ) : null}
+                      {product.status !== 'archived' ? (
+                        <button
+                          onClick={() => handleMarkTrend(product)}
+                          className="text-cyan-300 hover:text-cyan-200"
+                        >
+                          Trend
                         </button>
                       ) : null}
                       <button

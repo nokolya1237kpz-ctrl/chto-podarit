@@ -13,6 +13,10 @@ export type ProductAutoFillResult = {
   discountPercent?: number;
   wowRating: number;
   riskLevel: RiskLevel;
+  originalityScore: number;
+  professions: string[];
+  ageGroups: string[];
+  trendScore: number;
 };
 
 function includesAny(text: string, words: string[]) {
@@ -110,6 +114,10 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
     discountPercent: calculateDiscountPercent(productInput.price, productInput.oldPrice),
     wowRating: isBeauty || isGadget ? 8 : 7,
     riskLevel: 'low',
+    originalityScore: isBook || isGadget ? 7 : 6,
+    professions: unique(isGadget ? ['it', 'office'] : isKitchen ? ['home_cook'] : isSport ? ['fitness'] : []),
+    ageGroups: unique(isBeauty ? ['18-24', '25-34', '35-44'] : isGadget ? ['18-24', '25-34'] : ['25-34', '35-44']),
+    trendScore: isBeauty || isGadget || isSport ? 75 : 55,
   };
 }
 

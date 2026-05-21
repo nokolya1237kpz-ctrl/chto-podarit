@@ -12,6 +12,12 @@ export default async function Home() {
   if (isSupabaseConfigured()) {
     products = await getActiveProducts();
   }
+  const trendingProducts = products
+    .filter((product) => `${product.tags?.join(' ')} ${product.title}`.toLowerCase().match(/trend|viral|hit|хит|популяр/))
+    .concat(products.slice(0, 8))
+    .slice(0, 6);
+  const cheapestDeals = [...products].filter((product) => product.price > 0).sort((a, b) => a.price - b.price).slice(0, 6);
+  const newArrivals = products.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.16),transparent_25%),linear-gradient(180deg,#070a12,#0b1020)] text-white">
@@ -113,6 +119,10 @@ export default async function Home() {
             <PopularCollections />
           </section>
 
+          <ProductRail title="Трендовые товары" subtitle="Viral, hit и небанальные идеи из каталога" products={trendingProducts} />
+          <ProductRail title="Выгодные находки" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
+          <ProductRail title="Новые поступления" subtitle="Свежие active товары, готовые к кликам" products={newArrivals} />
+
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_32px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -129,5 +139,41 @@ export default async function Home() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+function ProductRail({ title, subtitle, products }: { title: string; subtitle: string; products: Product[] }) {
+  if (products.length === 0) return null;
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">{title}</h2>
+          <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((product) => (
+          <a
+            key={`${title}-${product.id}`}
+            href={product.affiliateUrl || product.originalUrl || '/quiz'}
+            target={product.affiliateUrl || product.originalUrl ? '_blank' : undefined}
+            rel={product.affiliateUrl || product.originalUrl ? 'noopener noreferrer' : undefined}
+            className="group rounded-3xl border border-white/10 bg-slate-950/80 p-4 transition hover:-translate-y-1 hover:border-purple-300/30 hover:shadow-[0_30px_100px_rgba(124,58,237,0.18)]"
+          >
+            <div className="flex h-44 items-center justify-center rounded-2xl bg-white">
+              {product.imageUrl ? <img src={product.imageUrl} alt={product.title} className="h-full w-full object-contain p-3" loading="lazy" /> : null}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-cyan-100">{product.marketplace}</span>
+              <span className="text-xs font-semibold text-purple-200">{product.wowRating}/10</span>
+            </div>
+            <h3 className="mt-3 line-clamp-2 text-sm font-semibold text-white">{product.title}</h3>
+            <p className="mt-3 text-xl font-bold text-white">{Math.round(product.price).toLocaleString('ru-RU')} ₽</p>
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }

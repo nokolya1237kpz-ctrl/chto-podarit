@@ -9,6 +9,7 @@ import {
 import { supabaseAdmin } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { applyAutoFillToProduct } from '@/lib/productAutoFill';
+import { isPublishableProduct } from '@/lib/productNormalize';
 
 /**
  * GET /api/admin/products
@@ -80,11 +81,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = applyAutoFillToProduct({
+    const filled = applyAutoFillToProduct({
       ...body,
       status: body.status ?? 'active',
       isActive: body.isActive ?? true,
     });
+    const publishable = isPublishableProduct(filled);
+    const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+      ...filled,
+      status: publishable ? filled.status : 'draft',
+      isActive: publishable ? filled.isActive : false,
+    };
 
     const created = await createProduct(product);
 

@@ -7,6 +7,8 @@ import { YandexMarketProvider } from './yandexMarketProvider';
 import { OzonProvider } from './ozonProvider';
 import { WildberriesProvider } from './wildberriesProvider';
 import { DirectApiProvider } from './directApiProvider';
+import { FeedProvider } from './feedProvider';
+import { ParserProvider } from './parserProvider';
 import type { ProductProvider } from './types';
 
 export const providers: Record<string, ProductProvider> = {
@@ -19,6 +21,8 @@ export const providers: Record<string, ProductProvider> = {
   ozon: new OzonProvider(),
   wildberries: new WildberriesProvider(),
   direct_api: new DirectApiProvider(),
+  feed: new FeedProvider(),
+  parser: new ParserProvider(),
 };
 
 export function getProviderById(id: string): ProductProvider | undefined {

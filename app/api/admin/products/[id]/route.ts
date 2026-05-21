@@ -3,6 +3,7 @@ import { verifyAdminSession } from '@/lib/adminAuth';
 import { updateProduct, deleteProduct } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { applyAutoFillToProduct } from '@/lib/productAutoFill';
+import { isPublishableProduct } from '@/lib/productNormalize';
 
 export async function PUT(
   request: NextRequest,
@@ -21,9 +22,14 @@ export async function PUT(
     const { id } = await context.params;
     const body = await request.json();
 
+    const filled = applyAutoFillToProduct(body);
+    const publishable = isPublishableProduct(filled);
     const updates: Partial<
       Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
-    > = applyAutoFillToProduct(body);
+    > = {
+      ...filled,
+      ...(filled.status === 'active' && !publishable ? { status: 'draft' as const, isActive: false } : {}),
+    };
 
     const updated = await updateProduct(id, updates);
 

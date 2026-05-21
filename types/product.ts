@@ -19,7 +19,7 @@ export type SourceProvider =
   | 'wildberries'
   | 'direct_api';
 
-export type SourceType = SourceProvider | 'api' | 'mock';
+export type SourceType = SourceProvider | 'api' | 'mock' | 'feed' | 'parser';
 
 export type ProductStatus = 'draft' | 'active' | 'archived';
 
@@ -50,6 +50,12 @@ export interface Product {
   riskLevel: RiskLevel;
   isBestPrice?: boolean;
   discountPercent?: number;
+  originalityScore?: number;
+  professions?: string[];
+  ageGroups?: string[];
+  trendSource?: string;
+  trendLabel?: string;
+  trendScore?: number;
   isActive: boolean;
   status: ProductStatus;
   sourceProvider: SourceProvider;
@@ -121,6 +127,12 @@ export interface ProductRow {
   risk_level: string;
   is_best_price: boolean;
   discount_percent: number | null;
+  originality_score?: number | null;
+  professions?: string[] | null;
+  age_groups?: string[] | null;
+  trend_source?: string | null;
+  trend_label?: string | null;
+  trend_score?: number | null;
   is_active: boolean;
   status: string;
   source_provider: string;

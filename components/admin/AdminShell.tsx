@@ -20,6 +20,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
 
   const menu = [
     { href: '/admin/products', label: 'Товары' },
+    { href: '/admin/bulk-import', label: 'Bulk import' },
     { href: '/admin/drafts', label: 'Черновики' },
     { href: '/admin/sources', label: 'Источники товаров' },
     { href: '/admin/sync', label: 'Синхронизация' },
