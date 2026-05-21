@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { getEpnAccessToken, getEpnSsidToken } from '@/lib/epn';
+import { getEpnRuntimeStatus } from '@/lib/epn';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,17 +25,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const ssidToken = await getEpnSsidToken();
-    const accessToken = await getEpnAccessToken();
+    const runtime = getEpnRuntimeStatus();
 
     return NextResponse.json({
       success: true,
-      connected: true,
+      connected: runtime.tokenCached && !runtime.captchaRequired,
       hasClientId: true,
       hasClientSecret: true,
-      ssidReceived: Boolean(ssidToken),
-      tokenReceived: Boolean(accessToken),
-      message: 'ePN API подключен',
+      ssidReceived: runtime.ssidCached,
+      tokenReceived: runtime.tokenCached,
+      tokenCached: runtime.tokenCached,
+      cooldownUntil: runtime.cooldownUntil,
+      captchaRequired: runtime.captchaRequired,
+      message: runtime.captchaRequired
+        ? 'ePN временно требует капчу. Остановите импорт и попробуйте позже.'
+        : runtime.tokenCached
+          ? 'ePN API подключен, используется cached token'
+          : 'ePN credentials настроены. Token будет получен при первом API-запросе.',
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -49,6 +55,9 @@ export async function GET(request: NextRequest) {
         hasClientSecret: Boolean(process.env.EPN_CLIENT_SECRET),
         ssidReceived: false,
         tokenReceived: false,
+        tokenCached: false,
+        cooldownUntil: null,
+        captchaRequired: false,
         message: 'Не удалось проверить ePN API',
         error: errorMessage,
         details,

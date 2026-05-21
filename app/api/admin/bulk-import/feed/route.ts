@@ -41,6 +41,17 @@ export async function POST(request: NextRequest) {
     }
 
     const rows = parseFeed(feedText).slice(0, 500);
+    if (rows.length === 0) {
+      let sampleKeys: string[] = [];
+      try {
+        const parsed = JSON.parse(feedText);
+        const sample = Array.isArray(parsed) ? parsed[0] : parsed?.products?.[0] || parsed?.items?.[0] || parsed?.offers?.[0] || parsed;
+        sampleKeys = sample && typeof sample === 'object' ? Object.keys(sample).slice(0, 30) : [];
+      } catch {
+        sampleKeys = feedText.slice(0, 300).match(/<([a-zA-Z0-9:_-]+)/g)?.map((tag) => tag.slice(1)).slice(0, 30) || [];
+      }
+      return NextResponse.json({ success: false, error: 'Unsupported feed format', sampleKeys }, { status: 400 });
+    }
     let imported = 0;
     let drafted = 0;
     let failed = 0;
@@ -56,7 +67,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, imported, drafted, failed, total: rows.length });
+    return NextResponse.json({ success: true, imported, drafted, failed, total: rows.length, sampleKeys: Object.keys(rows[0] || {}).slice(0, 30) });
   } catch (error) {
     console.error('Feed import error:', error);
     return NextResponse.json(

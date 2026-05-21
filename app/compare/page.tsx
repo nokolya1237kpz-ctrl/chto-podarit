@@ -13,6 +13,7 @@ type SearchResponse = {
   groups: Array<{ id: string; title: string; imageUrl?: string; items: Product[]; cheapest?: Product }>;
   cheapest?: Product;
   count: number;
+  diagnostics?: any[];
   error?: string;
 };
 
@@ -100,6 +101,12 @@ export default function ComparePage() {
                 </span>
               ))}
             </div>
+          ) : null}
+          {data?.diagnostics?.length ? (
+            <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4">
+              <summary className="cursor-pointer text-sm font-semibold">Diagnostics</summary>
+              <pre className="mt-3 max-h-72 overflow-auto text-xs text-slate-300">{JSON.stringify(data.diagnostics, null, 2)}</pre>
+            </details>
           ) : null}
         </section>
 

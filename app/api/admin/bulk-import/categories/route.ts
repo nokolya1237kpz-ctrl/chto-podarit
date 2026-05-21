@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { getEpnHotGoods, mapEpnGoodToProduct } from '@/lib/epn';
+import { delayEpnRequest, finishEpnImportJob, getEpnHotGoods, mapEpnGoodToProduct, tryStartEpnImportJob } from '@/lib/epn';
 import { importNormalizedProduct } from '@/lib/importProduct';
 
 const defaultCategories = [
@@ -15,6 +15,7 @@ const defaultCategories = [
 ];
 
 export async function POST(request: NextRequest) {
+  let started = false;
   try {
     const isAdmin = await verifyAdminSession();
     if (!isAdmin) {
@@ -22,14 +23,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const categories = Array.isArray(body.categories) && body.categories.length ? body.categories : defaultCategories;
-    const perCategory = Math.min(Number(body.perCategory || 12), 30);
+    started = tryStartEpnImportJob();
+    if (!started) {
+      return NextResponse.json({ success: false, error: 'Уже запущен ePN импорт. Дождитесь завершения.' }, { status: 409 });
+    }
+    const categories = (Array.isArray(body.categories) && body.categories.length ? body.categories : defaultCategories).slice(0, 5);
+    const perCategory = Math.min(Number(body.perCategory || 2), 2);
 
     let imported = 0;
     let drafted = 0;
     let failed = 0;
 
     for (const category of categories) {
+      await delayEpnRequest();
       const goods = await getEpnHotGoods({ q: category, limit: perCategory });
       for (const good of goods) {
         try {
@@ -46,6 +52,7 @@ export async function POST(request: NextRequest) {
           console.error('Category import item failed:', error);
           failed += 1;
         }
+        await delayEpnRequest();
       }
     }
 
@@ -54,7 +61,9 @@ export async function POST(request: NextRequest) {
     console.error('Category import error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Ошибка импорта категорий' },
-      { status: 500 }
+      { status: (error as any)?.status === 429 ? 429 : 500 }
     );
+  } finally {
+    if (started) finishEpnImportJob();
   }
 }

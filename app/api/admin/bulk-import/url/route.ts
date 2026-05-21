@@ -20,20 +20,41 @@ export async function POST(request: NextRequest) {
     let imported = 0;
     let drafted = 0;
     let failed = 0;
+    const reports: any[] = [];
 
     for (const url of urls.slice(0, 30)) {
       try {
         const parsed = await browserParser(url);
         const saved = await importNormalizedProduct(normalizeParsedProduct(parsed, 'manual'));
+        const report = {
+          url,
+          fetched: true,
+          titleFound: Boolean(parsed.title),
+          imageFound: Boolean(parsed.imageUrl),
+          priceFound: Number(parsed.price || 0) > 0,
+          created: Boolean(saved),
+          status: saved?.status || 'skipped',
+        };
+        reports.push(report);
         if (saved?.status === 'draft') drafted += 1;
         if (saved) imported += 1;
       } catch (error) {
         console.error('URL import failed:', error);
+        reports.push({
+          url,
+          fetched: false,
+          titleFound: false,
+          imageFound: false,
+          priceFound: false,
+          created: false,
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        });
         failed += 1;
       }
     }
 
-    return NextResponse.json({ success: true, imported, drafted, failed, total: urls.length });
+    return NextResponse.json({ success: true, imported, drafted, failed, total: urls.length, reports });
   } catch (error) {
     console.error('URL bulk import error:', error);
     return NextResponse.json(

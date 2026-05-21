@@ -34,11 +34,16 @@ export function parseXmlFeed(text: string): Record<string, any>[] {
     return {
       id: attr('id') || read('g:id') || read('id'),
       title: read('name') || read('title') || read('g:title'),
+      product_name: read('product_name') || read('model'),
       description: read('description') || read('g:description'),
       price: read('price') || read('g:price'),
+      current_price: read('current_price') || read('priceRUB'),
       oldPrice: read('oldprice') || read('old_price'),
+      original_price: read('original_price'),
       image: read('picture') || read('image_link') || read('g:image_link') || read('enclosure'),
+      image_url: read('image_url'),
       url: read('url') || read('link') || read('g:link'),
+      product_url: read('product_url'),
       category: read('category') || read('categoryId') || read('g:product_type'),
     };
   });
@@ -57,12 +62,12 @@ export function normalizeFeedItem(row: Record<string, any>, sourceProvider = 'fe
   const oldPrice = String(pick(row, ['oldPrice', 'old_price', 'compare_at_price']) || '').replace(/[^\d.,]/g, '').replace(',', '.');
 
   return {
-    title: pick(row, ['title', 'name', 'g:title']) || '',
-    description: pick(row, ['description', 'g:description']) || '',
-    imageUrl: pick(row, ['image', 'imageUrl', 'image_link', 'picture', 'g:image_link']) || '',
+    title: pick(row, ['name', 'title', 'product_name', 'model', 'g:title']) || '',
+    description: pick(row, ['description', 'desc', 'g:description']) || '',
+    imageUrl: pick(row, ['image', 'picture', 'image_url', 'imageUrl', 'image_link', 'g:image_link']) || '',
     price: Number(price) || 0,
     oldPrice: oldPrice ? Number(oldPrice) || undefined : undefined,
-    originalUrl,
+    originalUrl: pick(row, ['url', 'link', 'product_url', 'originalUrl', 'g:link']) || originalUrl,
     affiliateUrl: pick(row, ['affiliateUrl', 'affiliate_url', 'deeplink']) || originalUrl,
     marketplace: pick(row, ['marketplace']) || detectMarketplaceFromProductUrl(originalUrl),
     externalProductId: String(pick(row, ['externalProductId', 'id', 'sku', 'offer_id']) || originalUrl),

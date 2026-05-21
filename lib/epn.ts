@@ -8,6 +8,9 @@ interface EpnTokenCache {
   accessExpiresAt?: number;
   refreshToken?: string;
   refreshExpiresAt?: number;
+  captchaRequired?: boolean;
+  cooldownUntil?: number;
+  importJobRunning?: boolean;
 }
 
 export interface EpnStatusResult {
@@ -20,6 +23,9 @@ export interface EpnStatusResult {
   message: string;
   error?: string;
   details?: any;
+  tokenCached?: boolean;
+  cooldownUntil?: string | null;
+  captchaRequired?: boolean;
 }
 
 export interface EpnOffer {
@@ -94,6 +100,57 @@ class EpnApiError extends Error {
 }
 
 const tokenCache: EpnTokenCache = {};
+const EPN_CAPTCHA_MESSAGE = 'ePN временно требует капчу. Остановите импорт и попробуйте позже.';
+
+function isEpnCaptchaBody(body: any) {
+  const text = typeof body === 'string' ? body : JSON.stringify(body || {});
+  return text.toLowerCase().includes('captcha') || text.toLowerCase().includes('need captcha');
+}
+
+function setEpnCaptchaCooldown() {
+  tokenCache.captchaRequired = true;
+  tokenCache.cooldownUntil = Date.now() + 30 * 60 * 1000;
+}
+
+export function getEpnRuntimeStatus() {
+  const cooldownActive = Boolean(tokenCache.cooldownUntil && tokenCache.cooldownUntil > Date.now());
+  if (!cooldownActive && tokenCache.cooldownUntil) {
+    tokenCache.cooldownUntil = undefined;
+    tokenCache.captchaRequired = false;
+  }
+
+  return {
+    tokenCached: Boolean(tokenCache.accessToken && tokenCache.accessExpiresAt && tokenCache.accessExpiresAt > Date.now()),
+    ssidCached: Boolean(tokenCache.ssidToken && tokenCache.ssidExpiresAt && tokenCache.ssidExpiresAt > Date.now()),
+    cooldownUntil: cooldownActive && tokenCache.cooldownUntil ? new Date(tokenCache.cooldownUntil).toISOString() : null,
+    captchaRequired: Boolean(tokenCache.captchaRequired && cooldownActive),
+    importJobRunning: Boolean(tokenCache.importJobRunning),
+  };
+}
+
+export function assertEpnAvailable() {
+  const status = getEpnRuntimeStatus();
+  if (status.captchaRequired || status.cooldownUntil) {
+    throw new EpnApiError(EPN_CAPTCHA_MESSAGE, { cooldownUntil: status.cooldownUntil }, 429);
+  }
+}
+
+export function tryStartEpnImportJob() {
+  assertEpnAvailable();
+  if (tokenCache.importJobRunning) {
+    return false;
+  }
+  tokenCache.importJobRunning = true;
+  return true;
+}
+
+export function finishEpnImportJob() {
+  tokenCache.importJobRunning = false;
+}
+
+export async function delayEpnRequest(ms = 3500) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getEpnConfig() {
   const clientId = process.env.EPN_CLIENT_ID;
@@ -128,6 +185,7 @@ export interface EpnOffersFetchResult {
 }
 
 export async function getEpnSsidToken(): Promise<string> {
+  assertEpnAvailable();
   const { clientId, clientSecret, oauthBaseUrl } = getEpnConfig();
 
   if (!clientId || !clientSecret) {
@@ -150,6 +208,10 @@ export async function getEpnSsidToken(): Promise<string> {
   }
 
   if (!response.ok) {
+    if (response.status === 429 || isEpnCaptchaBody(body)) {
+      setEpnCaptchaCooldown();
+      throw new EpnApiError(EPN_CAPTCHA_MESSAGE, body, 429);
+    }
     throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
@@ -159,11 +221,12 @@ export async function getEpnSsidToken(): Promise<string> {
   }
 
   tokenCache.ssidToken = token;
-  tokenCache.ssidExpiresAt = Date.now() + 9 * 60 * 1000;
+  tokenCache.ssidExpiresAt = Date.now() + 23 * 60 * 60 * 1000;
   return token;
 }
 
 export async function getEpnAccessToken(): Promise<string> {
+  assertEpnAvailable();
   const { clientId, clientSecret, oauthBaseUrl } = getEpnConfig();
   if (!clientId || !clientSecret) {
     throw new EpnApiError('Missing EPN_CLIENT_ID or EPN_CLIENT_SECRET');
@@ -200,6 +263,10 @@ export async function getEpnAccessToken(): Promise<string> {
   }
 
   if (!response.ok) {
+    if (response.status === 429 || isEpnCaptchaBody(body)) {
+      setEpnCaptchaCooldown();
+      throw new EpnApiError(EPN_CAPTCHA_MESSAGE, body, 429);
+    }
     throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
@@ -212,7 +279,8 @@ export async function getEpnAccessToken(): Promise<string> {
   }
 
   tokenCache.accessToken = accessToken;
-  tokenCache.accessExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+  const cacheSeconds = Math.min(Math.max(expiresIn - 60, 20 * 60 * 60), 23 * 60 * 60);
+  tokenCache.accessExpiresAt = Date.now() + cacheSeconds * 1000;
 
   if (refreshToken) {
     tokenCache.refreshToken = refreshToken;
@@ -236,6 +304,7 @@ export async function epnFetch(
     retry?: boolean;
   } = {}
 ): Promise<any> {
+  assertEpnAvailable();
   const { apiBaseUrl } = getEpnConfig();
   const token = await getEpnAccessToken();
   const url = new URL(path.startsWith('http') ? path : `${apiBaseUrl}${path}`);
@@ -268,6 +337,17 @@ export async function epnFetch(
     body = text ? JSON.parse(text) : null;
   } catch {
     body = text;
+  }
+
+  if (response.status === 429 || isEpnCaptchaBody(body)) {
+    setEpnCaptchaCooldown();
+    throw new EpnApiError(EPN_CAPTCHA_MESSAGE, {
+      method: options.method || 'GET',
+      url: url.toString(),
+      body: options.body,
+      responseBody: body,
+      cooldownUntil: getEpnRuntimeStatus().cooldownUntil,
+    }, 429);
   }
 
   if (response.status === 401 && options.retry !== false) {

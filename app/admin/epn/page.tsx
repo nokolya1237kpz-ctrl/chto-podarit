@@ -14,6 +14,9 @@ type EpnStatus = {
   message: string;
   error?: string;
   details?: any;
+  tokenCached?: boolean;
+  cooldownUntil?: string | null;
+  captchaRequired?: boolean;
 };
 
 type EpnOffer = {
@@ -506,6 +509,8 @@ export default function EpnAdminPage() {
               <StatusRow label="Client Secret" value={status?.hasClientSecret ? 'найден' : 'не найден'} />
               <StatusRow label="SSID" value={status?.ssidReceived ? 'получен' : 'не получен'} />
               <StatusRow label="Token" value={status?.tokenReceived ? 'получен' : 'не получен'} />
+              <StatusRow label="Token cache" value={status?.tokenCached ? 'cached' : 'empty'} />
+              <StatusRow label="Cooldown" value={status?.cooldownUntil ? new Date(status.cooldownUntil).toLocaleTimeString('ru-RU') : 'нет'} />
               <StatusRow label="Подключение" value={status?.connected ? 'успешно' : 'отключено'} />
             </div>
             <button
@@ -518,6 +523,9 @@ export default function EpnAdminPage() {
             </button>
             {message && <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">{message}</div>}
             {error && <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+            {status?.captchaRequired ? (
+              <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">ePN временно требует капчу. Остановите импорт и попробуйте позже.</div>
+            ) : null}
             {status?.details && !error && (
               <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-200">{JSON.stringify(status.details)}</div>
             )}

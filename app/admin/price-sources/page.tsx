@@ -14,12 +14,18 @@ export default function PriceSourcesPage() {
   const [sources, setSources] = useState(initialSources);
   const [testQuery, setTestQuery] = useState('наушники');
   const [message, setMessage] = useState('');
+  const [diagnostics, setDiagnostics] = useState<any[]>([]);
+  const [samples, setSamples] = useState<Record<string, any[]>>({});
 
   async function testSource(id: string) {
     setMessage('Тестируем источник...');
-    const res = await fetch(`/api/compare/search?q=${encodeURIComponent(testQuery)}&marketplace=${id}`);
+    const res = await fetch(`/api/admin/debug/providers?q=${encodeURIComponent(testQuery)}`);
     const data = await res.json();
-    setMessage(`${id}: найдено ${data.count || 0}, статус ${data.sourceStats?.[id]?.status || 'unknown'}`);
+    setDiagnostics((data.diagnostics || []).filter((item: any) => item.provider === id));
+    setSamples(data.samples || {});
+    const found = data.samples?.[id]?.length || 0;
+    const latest = (data.diagnostics || []).filter((item: any) => item.provider === id).at(-1);
+    setMessage(`${id}: найдено ${found}, stage ${latest?.stage || '—'}, status ${latest?.status || 'unknown'}`);
   }
 
   return (
@@ -57,6 +63,17 @@ export default function PriceSourcesPage() {
                 <Field label="cacheTtlMinutes" value={String(source.cacheTtlMinutes)} />
                 <Field label="last error" value="—" />
               </div>
+              <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4">
+                <summary className="cursor-pointer text-sm font-semibold">Diagnostics</summary>
+                <pre className="mt-3 max-h-64 overflow-auto text-xs text-slate-300">{JSON.stringify(diagnostics.filter((item) => item.provider === source.id), null, 2)}</pre>
+                <div className="mt-3 grid gap-2">
+                  {(samples[source.id] || []).slice(0, 3).map((product, index) => (
+                    <div key={index} className="rounded-xl bg-white/5 p-3 text-xs text-slate-200">
+                      {product.title} · {product.price} ₽
+                    </div>
+                  ))}
+                </div>
+              </details>
             </div>
           ))}
         </div>

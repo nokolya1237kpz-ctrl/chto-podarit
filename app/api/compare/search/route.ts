@@ -5,6 +5,7 @@ import { getEpnHotGoods, mapEpnGoodToProduct } from '@/lib/epn';
 import { providers } from '@/lib/providers';
 import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormalize';
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
+import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';
 
 const marketplacePriority = ['epn', 'wildberries', 'ozon', 'aliexpress', 'yandex_market', 'feed', 'manual'];
 
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
   const minPrice = Number(searchParams.get('minPrice') || 0);
   const maxPrice = Number(searchParams.get('maxPrice') || 0);
   const sourceStats: Record<string, { count: number; status: string; error?: string }> = {};
+  const diagnostics: ProviderDiagnostic[] = [];
 
   try {
     const local = (await getActiveProducts(supabaseAdmin as any)).filter((product) => {
@@ -55,22 +57,37 @@ export async function GET(request: NextRequest) {
     const all: Product[] = local.map((product) => toCompareProduct(product, 'manual'));
 
     try {
+      const wbProvider: any = providers.wildberries;
+      const wbResult = wbProvider.searchWithDiagnostics
+        ? await wbProvider.searchWithDiagnostics({ query, limit: 20 })
+        : { products: await wbProvider.searchProducts({ query, limit: 20 }), diagnostics: [] };
+      all.push(...wbResult.products.map((product: Product) => toCompareProduct(product, 'wildberries')));
+      diagnostics.push(...wbResult.diagnostics);
+      sourceStats.wildberries = { count: wbResult.products.length, status: 'active' };
+    } catch (error) {
+      sourceStats.wildberries = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
+    }
+
+    try {
       const goods = await getEpnHotGoods({ q: query, limit: 20 });
       const epnProducts = goods.map((good) => toCompareProduct(mapEpnGoodToProduct(good), 'epn'));
       all.push(...epnProducts);
       sourceStats.epn = { count: epnProducts.length, status: 'active' };
     } catch (error) {
-      sourceStats.epn = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
+      sourceStats.epn = { count: 0, status: (error as any)?.status === 429 ? 'limited' : 'error', error: error instanceof Error ? error.message : String(error) };
+      diagnostics.push({ provider: 'epn', query, stage: 'fetch', status: 'warning', error: sourceStats.epn.error, details: (error as any)?.details });
     }
 
-    for (const id of ['wildberries', 'ozon', 'aliexpress', 'yandex_market']) {
+    for (const id of ['ozon', 'aliexpress', 'yandex_market']) {
       try {
         const provider = providers[id];
         const results = provider ? await provider.searchProducts({ query, limit: 20 }) : [];
         all.push(...results.map((product) => toCompareProduct(product, id)));
         sourceStats[id] = { count: results.length, status: 'active' };
+        diagnostics.push({ provider: id, query, stage: 'normalize', status: results.length ? 'success' : 'warning', normalized: results.length, error: results.length ? undefined : 'Источник ограничил публичный парсинг или требует JS/API' });
       } catch (error) {
         sourceStats[id] = { count: 0, status: String(error).includes('limited') ? 'limited' : 'error', error: error instanceof Error ? error.message : String(error) };
+        diagnostics.push({ provider: id, query, stage: 'fetch', status: 'error', error: sourceStats[id].error });
       }
     }
 
@@ -96,6 +113,7 @@ export async function GET(request: NextRequest) {
       groups,
       cheapest: data[0] || null,
       count: data.length,
+      diagnostics,
     });
   } catch (error) {
     return NextResponse.json(

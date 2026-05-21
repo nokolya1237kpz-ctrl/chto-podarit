@@ -26,6 +26,7 @@ export default function BulkImportPage() {
   const [feedUrl, setFeedUrl] = useState('');
   const [manualUrls, setManualUrls] = useState('');
   const [categories, setCategories] = useState(defaultCategories.join('\n'));
+  const [reportRows, setReportRows] = useState<any[]>([]);
 
   async function runImport(name: string, url: string, body: any) {
     setLoading(name);
@@ -43,8 +44,10 @@ export default function BulkImportPage() {
         throw new Error(data.error || 'Импорт не выполнен');
       }
       setMessage(`${name}: импортировано ${data.imported || 0}, черновиков ${data.drafted || 0}, ошибок ${data.failed || 0}`);
+      setReportRows(data.rows || data.reports || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка импорта');
+      const text = err instanceof Error ? err.message : 'Ошибка импорта';
+      setError(text.includes('captcha') || text.includes('капчу') ? 'ePN временно требует капчу. Остановите импорт и попробуйте позже.' : text);
     } finally {
       setLoading('');
     }
@@ -69,24 +72,24 @@ export default function BulkImportPage() {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 disabled={loading === 'ePN hot'}
-                onClick={() => runImport('ePN hot', '/api/admin/epn/import-hot', { query, limit: 50, withOffers: true })}
+                onClick={() => runImport('ePN hot', '/api/admin/epn/import-hot', { query, limit: 10, withOffers: true })}
                 className="rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Импортировать ePN hot
               </button>
               <button
                 disabled={loading === 'ePN trending'}
-                onClick={() => runImport('ePN trending', '/api/admin/epn/import-hot', { query: query || 'подарок', limit: 100 })}
+                onClick={() => runImport('ePN trending', '/api/admin/epn/import-hot', { query: query || 'подарок', limit: 10 })}
                 className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
               >
                 Hot/trending
               </button>
               <button
-                disabled={loading === '100 товаров'}
-                onClick={() => runImport('100 товаров', '/api/admin/bulk-import/categories', { categories: defaultCategories, perCategory: 9 })}
+                disabled={loading === '10 товаров'}
+                onClick={() => runImport('10 товаров', '/api/admin/bulk-import/preset', { queries: defaultCategories, limit: 10 })}
                 className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
               >
-                Импортировать 100 товаров
+                Импортировать 10 товаров
               </button>
             </div>
           </div>
@@ -137,13 +140,52 @@ export default function BulkImportPage() {
             />
             <button
               disabled={loading === 'categories'}
-              onClick={() => runImport('categories', '/api/admin/bulk-import/categories', { categories: categories.split('\n').map((item) => item.trim()).filter(Boolean), perCategory: 12 })}
+              onClick={() => runImport('categories', '/api/admin/bulk-import/categories', { categories: categories.split('\n').map((item) => item.trim()).filter(Boolean), perCategory: 1 })}
               className="mt-4 rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
             >
               Импортировать категории
             </button>
           </div>
         </section>
+        {reportRows.length > 0 ? (
+          <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold">Отчёт импорта</h2>
+              <div className="flex gap-3">
+                <a href="/admin/products" className="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-white">Открыть товары</a>
+                <a href="/admin/drafts" className="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-white">Открыть черновики</a>
+              </div>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-slate-400">
+                  <tr>
+                    <th className="p-2">source</th>
+                    <th className="p-2">query/url</th>
+                    <th className="p-2">found</th>
+                    <th className="p-2">active</th>
+                    <th className="p-2">draft</th>
+                    <th className="p-2">skipped</th>
+                    <th className="p-2">error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportRows.map((row, index) => (
+                    <tr key={index} className="border-t border-white/10">
+                      <td className="p-2">{row.source || row.status || 'manual'}</td>
+                      <td className="p-2">{row.query || row.url}</td>
+                      <td className="p-2">{row.found ?? row.foundRaw ?? '—'}</td>
+                      <td className="p-2">{row.active ?? row.importedActive ?? (row.status === 'active' ? 1 : 0)}</td>
+                      <td className="p-2">{row.draft ?? row.importedDraft ?? (row.status === 'draft' ? 1 : 0)}</td>
+                      <td className="p-2">{(row.skippedDuplicate || 0) + (row.skippedQuality || 0)}</td>
+                      <td className="p-2 text-rose-200">{row.error || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
       </div>
     </AdminShell>
   );
