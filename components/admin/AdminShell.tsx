@@ -21,6 +21,9 @@ export default function AdminShell({ title, children }: AdminShellProps) {
   const menu = [
     { href: '/admin/products', label: 'Товары' },
     { href: '/admin/bulk-import', label: 'Bulk import' },
+    { href: '/admin/url-import', label: 'URL import' },
+    { href: '/admin/import-file', label: 'CSV/XLSX import' },
+    { href: '/admin/feeds', label: 'Feeds' },
     { href: '/admin/price-sources', label: 'Price sources' },
     { href: '/admin/drafts', label: 'Черновики' },
     { href: '/admin/sources', label: 'Источники товаров' },

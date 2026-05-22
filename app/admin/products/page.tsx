@@ -226,7 +226,8 @@ export default function AdminProductsPage() {
               <option value="manual">Manual</option>
               <option value="admitad">Admitad</option>
               <option value="api">API</option>
-              <option value="mock">Mock</option>
+              <option value="feed">Feed</option>
+              <option value="search_api">Search API</option>
             </select>
             <select
               value={status}
@@ -256,7 +257,7 @@ export default function AdminProductsPage() {
         {loading ? (
           <div className="text-center py-12">Загрузка...</div>
         ) : (
-          <div className="bg-slate-900 border border-white/10 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto rounded-lg border border-white/10 bg-slate-900">
             <table className="w-full">
               <thead className="bg-slate-800">
                 <tr>

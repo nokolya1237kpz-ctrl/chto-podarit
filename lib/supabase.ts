@@ -80,6 +80,10 @@ function rowToProduct(row: ProductRow): Product {
     sourceProvider: normalizeSourceProvider(row.source_provider),
     sourceType: (row.source_type || normalizeSourceProvider(row.source_provider)) as Product['sourceType'],
     lastSyncedAt: row.last_synced_at || undefined,
+    lastPriceCheckedAt: row.last_price_checked_at || undefined,
+    priceLastCheckedAt: row.price_last_checked_at || row.last_price_checked_at || undefined,
+    priceCheckStatus: row.price_check_status || undefined,
+    priceStale: row.price_stale || undefined,
     deletedAt: row.deleted_at || undefined,
     deletedReason: row.deleted_reason || undefined,
     createdAt: row.created_at,
@@ -397,6 +401,18 @@ export async function updateProduct(
         }),
         ...(updates.lastSyncedAt !== undefined && {
           last_synced_at: updates.lastSyncedAt,
+        }),
+        ...(updates.lastPriceCheckedAt !== undefined && {
+          last_price_checked_at: updates.lastPriceCheckedAt,
+        }),
+        ...(updates.priceLastCheckedAt !== undefined && {
+          price_last_checked_at: updates.priceLastCheckedAt,
+        }),
+        ...(updates.priceCheckStatus !== undefined && {
+          price_check_status: updates.priceCheckStatus,
+        }),
+        ...(updates.priceStale !== undefined && {
+          price_stale: updates.priceStale,
         }),
         ...(updates.deletedAt !== undefined && {
           deleted_at: updates.deletedAt,

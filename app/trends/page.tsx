@@ -27,6 +27,12 @@ export default async function TrendsPage() {
         <section className="mt-8 grid gap-6 lg:grid-cols-3">
           {trends.map((product) => <GiftCard key={product.id} gift={product} />)}
         </section>
+        {trends.length === 0 ? (
+          <section className="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-8 text-center">
+            <h2 className="text-xl font-semibold">Раздел в разработке</h2>
+            <p className="mt-2 text-sm text-slate-400">Тренды появятся после первых импортов, кликов и ручной разметки товаров.</p>
+          </section>
+        ) : null}
       </main>
       <Footer />
     </div>

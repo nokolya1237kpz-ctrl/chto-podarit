@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveProducts, supabaseAdmin } from '@/lib/supabase';
-import { mockProvider } from '@/lib/providers/mockProvider';
 
 /**
  * GET /api/products
@@ -24,13 +23,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Supabase not configured — fall back to mock provider (only when not configured)
-    const products = await mockProvider.searchProducts({ limit: 100 });
     return NextResponse.json({
       success: true,
-      data: products,
-      count: products.length,
-      source: 'mock',
+      data: [],
+      count: 0,
+      source: 'not_configured',
+      message: 'Supabase is not configured; public product catalog is empty.',
     });
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -44,9 +42,9 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: message,
-        source: useSupabase ? 'supabase' : 'mock',
+        source: useSupabase ? 'supabase' : 'not_configured',
       },
-      { status: 500 }
+      { status: useSupabase ? 500 : 200 }
     );
   }
 }

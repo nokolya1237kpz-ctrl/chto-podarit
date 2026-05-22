@@ -70,6 +70,7 @@ export default function RotatingHeroProducts({ products }: RotatingHeroProductsP
 function HeroProductCard({ product, variant, rotationKey }: { product: Product; variant: 'large' | 'compact'; rotationKey: number }) {
   const productUrl = getProductFinalUrl(product);
   const isLarge = variant === 'large';
+  const hasProductUrl = Boolean(productUrl);
 
   return (
     <article
@@ -97,14 +98,20 @@ function HeroProductCard({ product, variant, rotationKey }: { product: Product; 
         </h3>
         <div className={`${isLarge ? 'mt-4 flex items-center justify-between gap-3' : 'mt-3 space-y-2'}`}>
           <p className={`${isLarge ? 'text-2xl' : 'text-lg'} font-bold text-white`}>{formatPrice(product)}</p>
-          <a
-            href={productUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${isLarge ? 'px-4 py-2.5' : 'w-full px-3 py-2'} inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] text-xs font-semibold text-white shadow-[0_14px_50px_rgba(124,58,237,0.28)] transition hover:brightness-110`}
-          >
-            Посмотреть товар
-          </a>
+          {hasProductUrl ? (
+            <a
+              href={productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${isLarge ? 'px-4 py-2.5' : 'w-full px-3 py-2'} inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] text-xs font-semibold text-white shadow-[0_14px_50px_rgba(124,58,237,0.28)] transition hover:brightness-110`}
+            >
+              Посмотреть товар
+            </a>
+          ) : (
+            <span className={`${isLarge ? 'px-4 py-2.5' : 'w-full px-3 py-2'} inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-slate-400`}>
+              Скоро
+            </span>
+          )}
         </div>
       </div>
     </article>

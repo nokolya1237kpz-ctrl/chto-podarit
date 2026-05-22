@@ -3,6 +3,7 @@ import { verifyAdminSession } from '@/lib/adminAuth';
 import { browserParser } from '@/lib/parsers/browserParser';
 import { normalizeParsedProduct } from '@/lib/parsers/normalizeParsedProduct';
 import { importNormalizedProduct } from '@/lib/importProduct';
+import { detectMarketplaceFromProductUrl } from '@/lib/epn';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,35 +19,47 @@ export async function POST(request: NextRequest) {
     }
 
     let imported = 0;
+    let active = 0;
     let drafted = 0;
     let failed = 0;
     const reports: any[] = [];
 
-    for (const url of urls.slice(0, 30)) {
+    for (const url of urls.slice(0, 100)) {
       try {
-        const parsed = await browserParser(url);
-        const saved = await importNormalizedProduct(normalizeParsedProduct(parsed, 'manual'));
+        const parsed = await browserParser(url, { allowAnyPublicDomain: true });
+        const marketplace = detectMarketplaceFromProductUrl(parsed.originalUrl || url);
+        const saved = await importNormalizedProduct({
+          ...normalizeParsedProduct({ ...parsed, originalUrl: parsed.originalUrl || url, marketplace }, 'manual'),
+          marketplace,
+        });
         const report = {
           url,
+          marketplace,
           fetched: true,
           titleFound: Boolean(parsed.title),
           imageFound: Boolean(parsed.imageUrl),
           priceFound: Number(parsed.price || 0) > 0,
           created: Boolean(saved),
+          createdActive: saved?.status === 'active',
+          createdDraft: saved?.status === 'draft',
           status: saved?.status || 'skipped',
         };
         reports.push(report);
+        if (saved?.status === 'active') active += 1;
         if (saved?.status === 'draft') drafted += 1;
         if (saved) imported += 1;
       } catch (error) {
         console.error('URL import failed:', error);
         reports.push({
           url,
+          marketplace: detectMarketplaceFromProductUrl(url),
           fetched: false,
           titleFound: false,
           imageFound: false,
           priceFound: false,
           created: false,
+          createdActive: false,
+          createdDraft: false,
           status: 'error',
           error: error instanceof Error ? error.message : String(error),
         });
@@ -54,7 +67,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, imported, drafted, failed, total: urls.length, reports });
+    return NextResponse.json({ success: true, imported, active, drafted, failed, total: Math.min(urls.length, 100), reports });
   } catch (error) {
     console.error('URL bulk import error:', error);
     return NextResponse.json(

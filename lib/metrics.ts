@@ -27,10 +27,6 @@ function send(ev: MetricsEvent) {
     } catch (e) {
       console.warn('Metrics send failed', e);
     }
-  } else {
-    // Fallback to console for local development
-    // eslint-disable-next-line no-console
-    console.log('[metrics]', ev);
   }
 }
 

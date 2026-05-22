@@ -28,9 +28,21 @@ const allowedDomains = [
 let lastRequestAt = 0;
 const domainState = new Map<string, { lastRequestAt: number; count: number; windowStartedAt: number; status?: string }>();
 
-export function isAllowedPublicUrl(url: string) {
+function isPrivateHost(host: string) {
+  const normalized = host.toLowerCase();
+  if (['localhost', '0.0.0.0', '::1'].includes(normalized)) return true;
+  if (/^127\./.test(normalized) || /^10\./.test(normalized) || /^192\.168\./.test(normalized)) return true;
+  const match172 = normalized.match(/^172\.(\d+)\./);
+  return Boolean(match172 && Number(match172[1]) >= 16 && Number(match172[1]) <= 31);
+}
+
+export function isAllowedPublicUrl(url: string, allowAnyPublicDomain = false) {
   try {
-    const host = new URL(url).hostname.toLowerCase();
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    const host = parsed.hostname.toLowerCase();
+    if (isPrivateHost(host)) return false;
+    if (allowAnyPublicDomain) return true;
     return allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
   } catch {
     return false;
@@ -68,8 +80,8 @@ async function setSupabaseCache(url: string, body: string, ttlMs: number) {
   }
 }
 
-export async function safeFetch(url: string, options: { ttlMs?: number; crawlDelayMs?: number; timeoutMs?: number; maxRequestsPerHour?: number } = {}) {
-  if (!isAllowedPublicUrl(url)) {
+export async function safeFetch(url: string, options: { ttlMs?: number; crawlDelayMs?: number; timeoutMs?: number; maxRequestsPerHour?: number; allowAnyPublicDomain?: boolean } = {}) {
+  if (!isAllowedPublicUrl(url, options.allowAnyPublicDomain)) {
     throw new Error('Domain is not allowed for controlled parser fallback');
   }
 

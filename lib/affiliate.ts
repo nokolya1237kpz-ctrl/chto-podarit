@@ -11,7 +11,7 @@ export function getProductFinalUrl(product: Product): string {
   if (product.admitadDeeplink) {
     return product.admitadDeeplink;
   }
-  return product.originalUrl;
+  return product.originalUrl || '';
 }
 
 /**

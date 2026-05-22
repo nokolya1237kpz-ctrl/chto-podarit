@@ -35,6 +35,7 @@ export default function BulkImportPage() {
   const [manualUrls, setManualUrls] = useState('');
   const [categories, setCategories] = useState(defaultCategories.join('\n'));
   const [reportRows, setReportRows] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('links');
 
   async function runImport(name: string, url: string, body: any) {
     setLoading(name);
@@ -67,10 +68,25 @@ export default function BulkImportPage() {
         {message ? <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
 
+        <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              ['links', 'По ссылкам'],
+              ['file', 'Файл CSV/XLSX'],
+              ['feed', 'Фид'],
+              ['search', 'Поисковый API'],
+            ].map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)} className={`rounded-2xl px-4 py-2 text-sm font-semibold ${activeTab === id ? 'bg-purple-600 text-white' : 'bg-white/5 text-slate-200'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="text-xl font-semibold">ePN mass import</h2>
-            <p className="mt-2 text-sm text-slate-400">API-first импорт hot/trending товаров с dedupe и авторазметкой.</p>
+          {activeTab === 'search' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+            <h2 className="text-xl font-semibold">Поисковый API / ePN approved</h2>
+            <p className="mt-2 text-sm text-slate-400">Search API растит базу из публичных URL. ePN используем аккуратно: approved offers, creatives, hot goods и cooldown.</p>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -112,9 +128,9 @@ export default function BulkImportPage() {
                 </button>
               ))}
             </div>
-          </div>
+          </div> : null}
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+          {activeTab === 'feed' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="text-xl font-semibold">Feeds</h2>
             <p className="mt-2 text-sm text-slate-400">JSON, CSV, XML, YML, Google Merchant и RSS-like feeds.</p>
             <input
@@ -130,11 +146,12 @@ export default function BulkImportPage() {
             >
               Импортировать feed URL
             </button>
-          </div>
+            <a href="/admin/feeds" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть feeds</a>
+          </div> : null}
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="text-xl font-semibold">Manual URL fallback</h2>
-            <p className="mt-2 text-sm text-slate-400">Только публичные страницы из allowlist, с cache и crawl delay.</p>
+          {activeTab === 'links' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+            <h2 className="text-xl font-semibold">По ссылкам</h2>
+            <p className="mt-2 text-sm text-slate-400">Главный production-safe путь: публичные product pages, metadata/JSON-LD, draft если не хватает цены или картинки.</p>
             <textarea
               value={manualUrls}
               onChange={(event) => setManualUrls(event.target.value)}
@@ -148,11 +165,18 @@ export default function BulkImportPage() {
             >
               Импортировать URL
             </button>
-          </div>
+            <a href="/admin/url-import" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть URL import</a>
+          </div> : null}
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+          {activeTab === 'file' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+            <h2 className="text-xl font-semibold">Файл CSV/XLSX/JSON</h2>
+            <p className="mt-2 text-sm text-slate-400">Самый быстрый способ загрузить 1000+ товаров с preview и mapping колонок.</p>
+            <a href="/admin/import-file" className="mt-4 inline-flex rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white">Открыть импорт файла</a>
+          </div> : null}
+
+          {activeTab === 'search' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="text-xl font-semibold">Импортировать категории</h2>
-            <p className="mt-2 text-sm text-slate-400">Массовая генерация ассортимента через ePN hot goods.</p>
+            <p className="mt-2 text-sm text-slate-400">Для быстрого старта лучше search API, feeds и URL import. Прямой parser маркетплейсов optional.</p>
             <textarea
               value={categories}
               onChange={(event) => setCategories(event.target.value)}
@@ -164,6 +188,18 @@ export default function BulkImportPage() {
               className="mt-4 rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
             >
               Импортировать категории
+            </button>
+          </div> : null}
+
+          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
+            <h2 className="text-xl font-semibold">Fast start</h2>
+            <p className="mt-2 text-sm text-slate-400">Curated demo catalog на 300 товаров: реальные названия и категории, без фейковых ссылок, всё уходит в draft.</p>
+            <button
+              disabled={loading === 'demo catalog'}
+              onClick={() => runImport('demo catalog', '/api/admin/demo-catalog', {})}
+              className="mt-4 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+            >
+              Загрузить демо-каталог 300 товаров
             </button>
           </div>
         </section>

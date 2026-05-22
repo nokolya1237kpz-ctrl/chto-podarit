@@ -27,6 +27,7 @@ export type SourceProvider =
   | 'megamarket'
   | 'mvideo'
   | 'eldorado'
+  | 'search_api'
   | 'direct_api';
 
 export type SourceType = SourceProvider | 'api' | 'mock' | 'feed' | 'parser';
@@ -74,6 +75,9 @@ export interface Product {
   sourceType?: SourceType;
   lastSyncedAt?: string;
   lastPriceCheckedAt?: string;
+  priceLastCheckedAt?: string;
+  priceCheckStatus?: string;
+  priceStale?: boolean;
   deletedAt?: string;
   deletedReason?: string;
   createdAt?: string;
@@ -153,6 +157,9 @@ export interface ProductRow {
   source_type: string | null;
   last_synced_at: string | null;
   last_price_checked_at: string | null;
+  price_last_checked_at?: string | null;
+  price_check_status?: string | null;
+  price_stale?: boolean | null;
   deleted_at?: string | null;
   deleted_reason?: string | null;
   created_at: string;

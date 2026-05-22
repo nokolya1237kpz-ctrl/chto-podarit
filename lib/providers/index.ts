@@ -14,6 +14,7 @@ import { CitilinkProvider } from './citilinkProvider';
 import { MegamarketProvider } from './megamarketProvider';
 import { MvideoProvider } from './mvideoProvider';
 import { EldoradoProvider } from './eldoradoProvider';
+import { SearchApiProvider } from './searchApiProvider';
 import type { ProductProvider } from './types';
 
 export const providers: Record<string, ProductProvider> = {
@@ -33,6 +34,7 @@ export const providers: Record<string, ProductProvider> = {
   megamarket: new MegamarketProvider(),
   mvideo: new MvideoProvider(),
   eldorado: new EldoradoProvider(),
+  search_api: new SearchApiProvider(),
 };
 
 export function getProviderById(id: string): ProductProvider | undefined {

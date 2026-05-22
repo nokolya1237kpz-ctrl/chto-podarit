@@ -7,8 +7,7 @@ import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormali
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';
 
-const marketplacePriority = ['epn', 'wildberries', 'ozon', 'dns_shop', 'citilink', 'mvideo', 'eldorado', 'megamarket', 'aliexpress', 'yandex_market', 'feed', 'manual'];
-const externalProviderIds = ['ozon', 'aliexpress', 'yandex_market', 'dns_shop', 'citilink', 'megamarket', 'mvideo', 'eldorado'];
+const marketplacePriority = ['search_api', 'epn', 'wildberries', 'feed', 'manual'];
 
 function toCompareProduct(product: any, sourceProvider?: string): Product {
   return {
@@ -57,51 +56,53 @@ export async function GET(request: NextRequest) {
 
     const all: Product[] = local.map((product) => toCompareProduct(product, 'manual'));
 
-    try {
-      const wbProvider: any = providers.wildberries;
-      const wbResult = wbProvider.searchWithDiagnostics
-        ? await wbProvider.searchWithDiagnostics({ query, limit: 20 })
-        : { products: await wbProvider.searchProducts({ query, limit: 20 }), diagnostics: [] };
-      all.push(...wbResult.products.map((product: Product) => toCompareProduct(product, 'wildberries')));
-      diagnostics.push(...wbResult.diagnostics);
-      const wbLimited = wbResult.diagnostics?.some((item: ProviderDiagnostic) => item.httpStatus === 403 || item.httpStatus === 429 || String(item.error || '').includes('limited'));
-      sourceStats.wildberries = {
-        count: wbResult.products.length,
-        status: wbResult.products.length ? 'active' : wbLimited ? 'limited' : 'error',
-        error: wbResult.products.length ? undefined : wbLimited ? 'Источник временно ограничил публичный запрос' : 'Wildberries не вернул товары',
-      };
-    } catch (error) {
-      sourceStats.wildberries = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
+    if (all.length < 5) {
+      try {
+        const provider: any = providers.search_api;
+        const result = provider?.searchWithDiagnostics
+          ? await provider.searchWithDiagnostics({ query, limit: 8 })
+          : { products: [], diagnostics: [] };
+        const results: Product[] = result.products || [];
+        all.push(...results.map((product) => toCompareProduct(product, 'search_api')));
+        diagnostics.push(...(result.diagnostics || []));
+        sourceStats.search_api = {
+          count: results.length,
+          status: results.length ? 'active' : 'requires_api',
+          error: results.length ? undefined : 'Настройте SERPAPI_KEY, GOOGLE_API_KEY/GOOGLE_CSE_ID или BING_SEARCH_API_KEY',
+        };
+      } catch (error) {
+        sourceStats.search_api = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
+        diagnostics.push({ provider: 'search_api', query, stage: 'fetch', status: 'error', error: sourceStats.search_api.error });
+      }
+    }
+
+    if (all.length < 5) {
+      try {
+        const wbProvider: any = providers.wildberries;
+        const wbResult = wbProvider.searchWithDiagnostics
+          ? await wbProvider.searchWithDiagnostics({ query, limit: 10 })
+          : { products: await wbProvider.searchProducts({ query, limit: 10 }), diagnostics: [] };
+        all.push(...wbResult.products.map((product: Product) => toCompareProduct(product, 'wildberries')));
+        diagnostics.push(...wbResult.diagnostics);
+        const wbLimited = wbResult.diagnostics?.some((item: ProviderDiagnostic) => item.httpStatus === 403 || item.httpStatus === 429 || String(item.error || '').includes('limited'));
+        sourceStats.wildberries = {
+          count: wbResult.products.length,
+          status: wbResult.products.length ? 'active' : wbLimited ? 'limited' : 'optional',
+          error: wbResult.products.length ? undefined : wbLimited ? 'Источник временно ограничил публичный запрос' : 'WB optional source did not return products',
+        };
+      } catch (error) {
+        sourceStats.wildberries = { count: 0, status: 'limited', error: error instanceof Error ? error.message : String(error) };
+      }
     }
 
     try {
-      const goods = await getEpnHotGoods({ q: query, limit: 20 });
+      const goods = await getEpnHotGoods({ q: query, limit: 10 });
       const epnProducts = goods.map((good) => toCompareProduct(mapEpnGoodToProduct(good), 'epn'));
       all.push(...epnProducts);
       sourceStats.epn = { count: epnProducts.length, status: 'active' };
     } catch (error) {
-      sourceStats.epn = { count: 0, status: (error as any)?.status === 429 ? 'limited' : 'error', error: error instanceof Error ? error.message : String(error) };
+      sourceStats.epn = { count: 0, status: (error as any)?.status === 429 ? 'limited' : 'optional', error: error instanceof Error ? error.message : String(error) };
       diagnostics.push({ provider: 'epn', query, stage: 'fetch', status: 'warning', error: sourceStats.epn.error, details: (error as any)?.details });
-    }
-
-    for (const id of externalProviderIds) {
-      try {
-        const provider: any = providers[id];
-        const result = provider?.searchWithDiagnostics
-          ? await provider.searchWithDiagnostics({ query, limit: 10 })
-          : { products: provider ? await provider.searchProducts({ query, limit: 10 }) : [], diagnostics: [] };
-        const results: Product[] = result.products || [];
-        all.push(...results.map((product) => toCompareProduct(product, id)));
-        diagnostics.push(...(result.diagnostics || []));
-        sourceStats[id] = {
-          count: results.length,
-          status: results.length ? 'active' : (result.diagnostics || []).some((item: ProviderDiagnostic) => item.status === 'warning') ? 'limited' : 'error',
-          error: results.length ? undefined : 'Источник временно ограничил запросы',
-        };
-      } catch (error) {
-        sourceStats[id] = { count: 0, status: String(error).includes('limited') ? 'limited' : 'error', error: error instanceof Error ? error.message : String(error) };
-        diagnostics.push({ provider: id, query, stage: 'fetch', status: 'error', error: sourceStats[id].error });
-      }
     }
 
     let data = all

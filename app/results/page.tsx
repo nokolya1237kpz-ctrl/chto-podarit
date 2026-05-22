@@ -1,11 +1,11 @@
 import { getActiveProducts } from '@/lib/supabase';
-import { mockProvider } from '@/lib/providers/mockProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { matchProducts } from '@/lib/productMatcher';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GiftCard from '@/components/GiftCard';
 import ResultsTracker from '@/components/ResultsTracker';
+import type { Product } from '@/types/product';
 
 function getSearchParam(value: string | string[] | undefined) {
   if (!value) return '';
@@ -19,12 +19,9 @@ export default async function ResultsPage({
 }) {
   const resolvedSearchParams = await searchParams;
 
-  // Get products from Supabase or fallback to mock if not configured
-  let products = [];
+  let products: Product[] = [];
   if (isSupabaseConfigured()) {
     products = await getActiveProducts();
-  } else {
-    products = await mockProvider.searchProducts({ limit: 100 });
   }
 
   // Parse search params
@@ -92,6 +89,12 @@ export default async function ResultsPage({
               <GiftCard key={product.id} gift={product} />
             ))}
           </div>
+          {matched.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-8 text-center text-slate-300">
+              <h2 className="text-xl font-semibold text-white">Каталог пока пуст</h2>
+              <p className="mt-2 text-sm text-slate-400">Добавьте товары в админке через URL import, файл или feed — после публикации подборки появятся здесь.</p>
+            </div>
+          ) : null}
 
           <ResultsTracker
             count={matched.length}

@@ -11,8 +11,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/quiz',
     '/results',
     '/compare',
-    '/trends',
-    '/auto-parts',
     ...tags.map((tag) => `/compare?q=${encodeURIComponent(tag)}`),
   ].map((path) => ({
     url: `${baseUrl}${path}`,

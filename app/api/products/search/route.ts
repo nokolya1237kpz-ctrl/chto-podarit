@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Product } from '@/types/product';
 import { isSupabaseConfigured, searchProducts } from '@/lib/supabase';
-import { mockProvider } from '@/lib/providers/mockProvider';
 
 function parseList(value: string | null): string[] {
   if (!value) return [];
@@ -27,20 +26,6 @@ export async function GET(request: NextRequest) {
     let products: Product[] = [];
     if (isSupabaseConfigured()) {
       products = await searchProducts(filters);
-    }
-
-    if (!products || products.length === 0) {
-      products = await mockProvider.searchProducts({
-        query: filters.query,
-        recipient: filters.recipient,
-        budget: filters.budget,
-        interests: filters.interests,
-        occasions: filters.occasions,
-        giftTypes: filters.giftTypes,
-        tags: filters.tags,
-        marketplace: filters.marketplace,
-        limit: 100,
-      });
     }
 
     return NextResponse.json({ success: true, data: products, count: products.length });

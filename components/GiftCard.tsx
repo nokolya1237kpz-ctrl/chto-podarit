@@ -7,6 +7,7 @@ import SafeProductImage from '@/components/SafeProductImage';
 export default function GiftCard({ gift }: { gift: Product }) {
   const [copied, setCopied] = React.useState(false);
   const productUrl = getProductFinalUrl(gift);
+  const hasProductUrl = Boolean(productUrl);
 
   const copy = async () => {
     try {
@@ -60,14 +61,20 @@ export default function GiftCard({ gift }: { gift: Product }) {
         </div>
 
         <div className="mt-auto flex flex-col gap-3 sm:flex-row">
-          <a
-            href={productUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_20px_80px_rgba(124,58,237,0.32)] transition hover:brightness-110 hover:shadow-[0_28px_120px_rgba(124,58,237,0.4)]"
-          >
-            Посмотреть товар
-          </a>
+          {hasProductUrl ? (
+            <a
+              href={productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_20px_80px_rgba(124,58,237,0.32)] transition hover:brightness-110 hover:shadow-[0_28px_120px_rgba(124,58,237,0.4)]"
+            >
+              Посмотреть товар
+            </a>
+          ) : (
+            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-slate-400">
+              Ссылка скоро
+            </span>
+          )}
 
           <button
             type="button"

@@ -30,6 +30,9 @@ export async function importNormalizedProduct(input: ImportProductInput): Promis
     isActive: input.isActive ?? true,
     status: input.status || 'active',
     budget: input.budget || '',
+    priceLastCheckedAt: input.priceLastCheckedAt || new Date().toISOString(),
+    priceCheckStatus: input.priceCheckStatus || 'fresh',
+    priceStale: input.priceStale || false,
   } as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>);
 
   const publishable = isPublishableProduct(normalized);

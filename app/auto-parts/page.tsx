@@ -51,6 +51,12 @@ export default async function AutoPartsPage({ searchParams }: { searchParams: Pr
             </article>
           ))}
         </section>
+        {autoProducts.length === 0 ? (
+          <section className="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-8 text-center">
+            <h2 className="text-xl font-semibold">Auto-parts MVP в разработке</h2>
+            <p className="mt-2 text-sm text-slate-400">Пока показываем только локальные товары из каталога. Добавьте feed или manual products с авто-тегами, чтобы раздел наполнился.</p>
+          </section>
+        ) : null}
       </main>
       <Footer />
     </div>
