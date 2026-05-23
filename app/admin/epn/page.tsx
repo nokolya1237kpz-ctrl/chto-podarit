@@ -189,11 +189,15 @@ export default function EpnAdminPage() {
     try {
       const res = await fetch(`/api/admin/epn/goods-hot?q=${encodeURIComponent(goodsQuery)}`);
       const data = await res.json();
-      if (!res.ok) {
+      setRequestUrl(data.debug?.requestUrl || res.url);
+      setRequestParams(data.debug?.requestParams || { q: goodsQuery.trim(), limit: 20 });
+      setResponseBody(data.debug || data);
+      setDebugOpen(false);
+      if (!res.ok || !data.success) {
         throw new Error(data.error || 'Ошибка поиска товаров');
       }
       setGoods(data.goods || []);
-      setMessage(`Найдено ${data.count || 0} товаров`);
+      setMessage(data.count > 0 ? `Найдено ${data.count || 0} товаров` : 'ePN API не вернул товары по запросу. Используйте approved offers, creatives или feed.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось получить товары');
     } finally {

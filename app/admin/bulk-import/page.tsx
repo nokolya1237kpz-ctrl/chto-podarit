@@ -49,11 +49,11 @@ export default function BulkImportPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      setReportRows(data.rows || data.reports || []);
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Импорт не выполнен');
       }
       setMessage(`${name}: импортировано ${data.imported || 0}, обновлено ${data.updated || 0}, активных ${data.importedActive || 0}, черновиков ${data.importedDraft || data.drafted || 0}, дублей пропущено ${data.skippedDuplicate || 0}, ошибок ${data.errors || data.failed || 0}`);
-      setReportRows(data.rows || data.reports || []);
     } catch (err) {
       const text = err instanceof Error ? err.message : 'Ошибка импорта';
       setError(text.includes('captcha') || text.includes('капчу') ? 'ePN временно требует капчу. Остановите импорт и попробуйте позже.' : text);

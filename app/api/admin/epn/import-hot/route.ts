@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { delayEpnRequest, finishEpnImportJob, getEpnHotGoods, mapEpnGoodToProduct, searchEpnOffers, tryStartEpnImportJob } from '@/lib/epn';
+import { delayEpnRequest, finishEpnImportJob, getEpnHotGoodsWithDebug, mapEpnGoodToProduct, searchEpnOffers, tryStartEpnImportJob } from '@/lib/epn';
 import { importNormalizedProduct } from '@/lib/importProduct';
 
 export async function POST(request: NextRequest) {
@@ -28,17 +28,39 @@ export async function POST(request: NextRequest) {
     }
 
     const goodsBatches = [];
+    const debugBatches: any[] = [];
     if (offerIds.length > 0) {
       for (const id of offerIds) {
         await delayEpnRequest();
-        goodsBatches.push(await getEpnHotGoods({ q, offerId: id, limit: Math.ceil(limit / offerIds.length) }));
+        const result = await getEpnHotGoodsWithDebug({ q, offerId: id, limit: Math.ceil(limit / offerIds.length) });
+        goodsBatches.push(result.goods);
+        debugBatches.push(result.debug);
       }
     } else {
       await delayEpnRequest();
-      goodsBatches.push(await getEpnHotGoods({ q, limit }));
+      const result = await getEpnHotGoodsWithDebug({ q, limit });
+      goodsBatches.push(result.goods);
+      debugBatches.push(result.debug);
     }
 
     const goods = goodsBatches.flat().slice(0, limit);
+    if (goods.length === 0) {
+      return NextResponse.json({
+        success: false,
+        reason: 'no_epn_goods_endpoint',
+        error: 'ePN API не вернул товары по запросу. Используйте approved offers, creatives или feed.',
+        imported: 0,
+        drafted: 0,
+        failed: 0,
+        total: 0,
+        debug: {
+          batches: debugBatches,
+          foundRaw: debugBatches.reduce((sum, item) => sum + Number(item?.foundRaw || 0), 0),
+          normalized: 0,
+          imported: 0,
+        },
+      }, { status: 400 });
+    }
     let imported = 0;
     let drafted = 0;
     let failed = 0;
@@ -69,11 +91,22 @@ export async function POST(request: NextRequest) {
       drafted,
       failed,
       total: goods.length,
+      debug: {
+        batches: debugBatches,
+        foundRaw: debugBatches.reduce((sum, item) => sum + Number(item?.foundRaw || 0), 0),
+        normalized: goods.length,
+        imported,
+      },
     });
   } catch (error) {
     console.error('Error importing ePN hot goods:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Ошибка массового импорта ePN' },
+      {
+        success: false,
+        reason: (error as any)?.status === 429 ? 'epn_captcha' : (error as any)?.status === 401 ? 'epn_unauthorized' : 'epn_import_failed',
+        error: error instanceof Error ? error.message : 'Ошибка массового импорта ePN',
+        debug: (error as any)?.details,
+      },
       { status: (error as any)?.status === 429 ? 429 : 500 }
     );
   } finally {

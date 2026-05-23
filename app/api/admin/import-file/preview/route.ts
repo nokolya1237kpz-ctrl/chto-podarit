@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const rows = parseImportFile(new Uint8Array(await file.arrayBuffer()), file.name, file.type);
     const sample = rows.slice(0, 20);
     const columns = Object.keys(rows[0] || {});
-    return NextResponse.json({ success: true, total: rows.length, columns, sample });
+    return NextResponse.json({ success: true, total: rows.length, columns, sample, rows });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка preview файла' }, { status: 400 });
   }

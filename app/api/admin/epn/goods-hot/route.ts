@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { getEpnHotGoods } from '@/lib/epn';
+import { getEpnHotGoodsWithDebug } from '@/lib/epn';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       ? Number(searchParams.get('priceMax'))
       : undefined;
 
-    const goods = await getEpnHotGoods({
+    const result = await getEpnHotGoodsWithDebug({
       q,
       limit,
       offset,
@@ -31,14 +31,18 @@ export async function GET(request: NextRequest) {
       priceMin,
       priceMax,
     });
+    const goods = result.goods;
 
-    if (offerId && goods.length === 0) {
+    if (goods.length === 0) {
       return NextResponse.json({
         success: false,
-        reason: 'NO_GOODS',
-        error: 'У этого оффера нет товаров для импорта',
+        reason: offerId ? 'NO_GOODS' : 'no_epn_goods_endpoint',
+        error: offerId
+          ? 'У этого оффера нет товаров для импорта'
+          : 'ePN API не вернул товары по запросу. Используйте approved offers, creatives или feed.',
         goods,
         count: 0,
+        debug: result.debug,
       });
     }
 
@@ -46,6 +50,7 @@ export async function GET(request: NextRequest) {
       success: true,
       goods,
       count: goods.length,
+      debug: result.debug,
     });
   } catch (error) {
     console.error('Error loading ePN hot goods:', error);
@@ -53,6 +58,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: error instanceof Error ? error.message : 'Ошибка загрузки горячих товаров',
+        debug: (error as any)?.details,
       },
       { status: 500 }
     );

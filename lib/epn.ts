@@ -480,6 +480,67 @@ export async function epnFetch(
   return body;
 }
 
+async function epnFetchWithDebug(
+  path: string,
+  options: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    query?: Record<string, string | number | boolean | undefined>;
+    body?: any;
+    headers?: Record<string, string>;
+  } = {}
+) {
+  assertEpnAvailable();
+  const { apiBaseUrl } = getEpnConfig();
+  const token = await getEpnAccessToken();
+  const url = new URL(path.startsWith('http') ? path : `${apiBaseUrl}${path}`);
+
+  if (options.query) {
+    Object.entries(options.query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
+
+  const method = options.method || 'GET';
+  const response = await fetch(url.toString(), {
+    method,
+    headers: {
+      Accept: 'application/json',
+      'Accept-Language': 'ru',
+      'X-ACCESS-TOKEN': token,
+      ...options.headers,
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const text = await response.text();
+  let body: any = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text;
+  }
+
+  const debug = {
+    endpoint: path,
+    method,
+    requestUrl: url.toString(),
+    requestParams: options.query || {},
+    status: response.status,
+    responseBody: body,
+  };
+
+  if (response.status === 429 || isEpnCaptchaBody(body)) {
+    setEpnCaptchaCooldown();
+    throw new EpnApiError(EPN_CAPTCHA_MESSAGE, { ...debug, cooldownUntil: getEpnRuntimeStatus().cooldownUntil }, 429);
+  }
+  if (!response.ok) {
+    throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), debug, response.status);
+  }
+
+  return { body, debug };
+}
+
 async function fetchEpnOffersWithViewRules(
   requestParams: Record<string, any>
 ): Promise<EpnOffersFetchResult> {
@@ -550,6 +611,39 @@ export async function getEpnHotGoods(params: {
     },
   });
   return normalizeEpnGoodsList(response);
+}
+
+export async function getEpnHotGoodsWithDebug(params: {
+  q?: string;
+  limit?: number;
+  offset?: number;
+  categoryId?: string;
+  offerId?: string;
+  priceMin?: number;
+  priceMax?: number;
+} = {}) {
+  const query = {
+    v: '2',
+    locale: 'ru',
+    q: params.q,
+    limit: params.limit ?? 20,
+    offset: params.offset ?? 0,
+    category_id: params.categoryId,
+    offer_id: params.offerId,
+    price_min: params.priceMin,
+    price_max: params.priceMax,
+  };
+  const { body, debug } = await epnFetchWithDebug('/goods/hot', { query });
+  const goods = normalizeEpnGoodsList(body);
+  const rawItems = body?.data?.items || body?.data || body?.items || body?.goods || [];
+  return {
+    goods,
+    debug: {
+      ...debug,
+      foundRaw: Array.isArray(rawItems) ? rawItems.length : 0,
+      normalized: goods.length,
+    },
+  };
 }
 
 export async function getEpnCreatives(params: {
