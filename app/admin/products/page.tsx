@@ -57,7 +57,7 @@ export default function AdminProductsPage() {
     if (!confirm('Товар будет удалён из базы без восстановления. Продолжить?')) return;
 
     try {
-      const res = await fetch(`/api/admin/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${id}?force=true`, {
         method: 'DELETE',
       });
 
@@ -70,6 +70,25 @@ export default function AdminProductsPage() {
     } catch (err) {
       setError('Сетевая ошибка');
       console.error(err);
+    }
+  }
+
+  async function handleCleanup(action: string) {
+    if (!confirm('Будут удалены товары по выбранному правилу. Продолжить?')) return;
+    try {
+      const res = await fetch('/api/admin/products/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Cleanup failed');
+        return;
+      }
+      await fetchProducts();
+    } catch {
+      setError('Ошибка cleanup');
     }
   }
 
@@ -193,6 +212,23 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
+        <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
+          <p className="text-sm font-semibold text-white">Cleanup tools</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              ['draft_feed', 'Удалить draft feed товары'],
+              ['no_image', 'Удалить без image'],
+              ['zero_price', 'Удалить price=0'],
+              ['soft_deleted', 'Удалить soft deleted'],
+              ['failed_imports', 'Очистить failed imports'],
+            ].map(([action, label]) => (
+              <button key={action} onClick={() => handleCleanup(action)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 hover:bg-white/10">
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
           {/* Filters */}
         <div className="bg-slate-900 border border-white/10 rounded-lg p-6 mb-8 space-y-4">
@@ -271,9 +307,17 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {products.map((product) => (
+                {products.filter((product) => product.title).map((product) => (
                   <tr key={product.id} className="hover:bg-slate-800/50">
-                    <td className="px-6 py-4 text-sm">{product.title}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <div>{product.title}</div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {product.sourceType === 'feed' ? <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-100">imported</span> : null}
+                        {product.status === 'draft' ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-100">draft</span> : null}
+                        {(!product.imageUrl || !product.price) ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] text-rose-100">incomplete</span> : null}
+                        {product.enrichmentStatus === 'enriched' ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-100">enriched</span> : null}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm">{product.price.toLocaleString('ru-RU')} ₽</td>
                     <td className="px-6 py-4 text-sm">{getMarketplaceName(product.marketplace)}</td>
                     <td className="px-6 py-4 text-sm text-purple-300">{product.sourceType}</td>

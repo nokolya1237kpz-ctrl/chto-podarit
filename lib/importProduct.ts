@@ -2,15 +2,44 @@ import type { Product } from '@/types/product';
 import { applyAutoFillToProduct } from '@/lib/productAutoFill';
 import { cleanupTitle, getDedupeKey, isPublishableProduct, normalizeMarketplace, normalizeProductUrl } from '@/lib/productNormalize';
 import { upsertProductByExternalId, supabaseAdmin } from '@/lib/supabase';
+import { browserParser } from '@/lib/parsers/browserParser';
 
 export type ImportProductInput = Partial<Product> & {
   category?: string;
 };
 
+async function enrichProduct(input: ImportProductInput) {
+  const needsEnrichment = Boolean(input.originalUrl && (!input.imageUrl || !input.description || !Number(input.price || 0)));
+  if (!needsEnrichment) return { input, enriched: false, errors: [] as string[] };
+  try {
+    const parsed = await browserParser(input.originalUrl as string, { allowAnyPublicDomain: true });
+    return {
+      input: {
+        ...input,
+        title: input.title || parsed.title,
+        description: input.description || parsed.description,
+        imageUrl: input.imageUrl || parsed.imageUrl,
+        price: Number(input.price || 0) || parsed.price,
+        currency: input.currency || parsed.currency,
+        originalUrl: input.originalUrl || parsed.originalUrl,
+      },
+      enriched: true,
+      errors: [] as string[],
+    };
+  } catch (error) {
+    return { input, enriched: false, errors: [error instanceof Error ? error.message : String(error)] };
+  }
+}
+
 export async function importNormalizedProduct(input: ImportProductInput): Promise<Product | null> {
+  const enrichment = await enrichProduct(input);
+  input = enrichment.input;
+  const cleanedTitle = cleanupTitle(input.title);
+  if (!cleanedTitle) return null;
+
   const normalized = applyAutoFillToProduct({
     ...input,
-    title: cleanupTitle(input.title),
+    title: cleanedTitle,
     marketplace: normalizeMarketplace(String(input.marketplace || 'other')),
     originalUrl: normalizeProductUrl(input.originalUrl),
     affiliateUrl: normalizeProductUrl(input.affiliateUrl),
@@ -33,6 +62,10 @@ export async function importNormalizedProduct(input: ImportProductInput): Promis
     priceLastCheckedAt: input.priceLastCheckedAt || new Date().toISOString(),
     priceCheckStatus: input.priceCheckStatus || 'fresh',
     priceStale: input.priceStale || false,
+    importStatus: input.importStatus || 'imported',
+    enrichmentStatus: enrichment.enriched ? 'enriched' : enrichment.errors.length ? 'failed' : 'not_needed',
+    sourceFeedId: input.sourceFeedId,
+    parseErrors: [...(input.parseErrors || []), ...enrichment.errors],
   } as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>);
 
   const publishable = isPublishableProduct(normalized);
@@ -41,6 +74,7 @@ export async function importNormalizedProduct(input: ImportProductInput): Promis
     externalProductId: normalized.externalProductId || getDedupeKey(normalized),
     status: publishable ? normalized.status : 'draft',
     isActive: publishable ? normalized.isActive : false,
+    importStatus: publishable ? 'active_ready' : 'draft_incomplete',
   } as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 
   const saved = await upsertProductByExternalId(product);

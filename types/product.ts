@@ -28,6 +28,7 @@ export type SourceProvider =
   | 'mvideo'
   | 'eldorado'
   | 'search_api'
+  | 'feed'
   | 'direct_api';
 
 export type SourceType = SourceProvider | 'api' | 'mock' | 'feed' | 'parser';
@@ -78,6 +79,10 @@ export interface Product {
   priceLastCheckedAt?: string;
   priceCheckStatus?: string;
   priceStale?: boolean;
+  importStatus?: string;
+  enrichmentStatus?: string;
+  sourceFeedId?: string;
+  parseErrors?: string[];
   deletedAt?: string;
   deletedReason?: string;
   createdAt?: string;
@@ -160,6 +165,10 @@ export interface ProductRow {
   price_last_checked_at?: string | null;
   price_check_status?: string | null;
   price_stale?: boolean | null;
+  import_status?: string | null;
+  enrichment_status?: string | null;
+  source_feed_id?: string | null;
+  parse_errors?: string[] | null;
   deleted_at?: string | null;
   deleted_reason?: string | null;
   created_at: string;

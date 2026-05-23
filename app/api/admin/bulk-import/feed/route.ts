@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { parseFeed, normalizeFeedItem } from '@/lib/feedImport';
-import { importNormalizedProduct } from '@/lib/importProduct';
+import { importFeedRows } from '@/lib/feedPipeline';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,22 +52,16 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ success: false, error: 'Unsupported feed format', sampleKeys }, { status: 400 });
     }
-    let imported = 0;
-    let drafted = 0;
-    let failed = 0;
-
-    for (const row of rows) {
-      try {
-        const saved = await importNormalizedProduct(normalizeFeedItem(row, sourceProvider));
-        if (saved?.status === 'draft') drafted += 1;
-        if (saved) imported += 1;
-      } catch (error) {
-        console.error('Feed item import failed:', error);
-        failed += 1;
-      }
-    }
-
-    return NextResponse.json({ success: true, imported, drafted, failed, total: rows.length, sampleKeys: Object.keys(rows[0] || {}).slice(0, 30) });
+    const report = await importFeedRows(rows, sourceProvider);
+    return NextResponse.json({
+      success: true,
+      imported: report.importedActive + report.importedDraft,
+      drafted: report.importedDraft,
+      failed: report.errors,
+      total: rows.length,
+      ...report,
+      sampleKeys: Object.keys(rows[0] || {}).slice(0, 30),
+    });
   } catch (error) {
     console.error('Feed import error:', error);
     return NextResponse.json(

@@ -84,6 +84,10 @@ function rowToProduct(row: ProductRow): Product {
     priceLastCheckedAt: row.price_last_checked_at || row.last_price_checked_at || undefined,
     priceCheckStatus: row.price_check_status || undefined,
     priceStale: row.price_stale || undefined,
+    importStatus: row.import_status || undefined,
+    enrichmentStatus: row.enrichment_status || undefined,
+    sourceFeedId: row.source_feed_id || undefined,
+    parseErrors: row.parse_errors || undefined,
     deletedAt: row.deleted_at || undefined,
     deletedReason: row.deleted_reason || undefined,
     createdAt: row.created_at,
@@ -266,6 +270,10 @@ export async function createProduct(
         source_provider: sourceProvider,
         source_type: product.sourceType || sourceProvider,
         last_synced_at: product.lastSyncedAt,
+        import_status: product.importStatus,
+        enrichment_status: product.enrichmentStatus,
+        source_feed_id: product.sourceFeedId,
+        parse_errors: product.parseErrors,
       })
       .select()
       .single();
@@ -288,23 +296,38 @@ export async function upsertProductByExternalId(
 ): Promise<Product | null> {
   if (!supabase) return null;
 
-  if (!product.externalProductId || !product.sourceProvider) {
-    return createProduct(product, supabase);
-  }
-
   try {
-    let { data: existing, error: existingError } = await supabase
-      .from('products')
-      .select('id, deleted_at')
-      .eq('external_product_id', product.externalProductId)
-      .eq('source_provider', product.sourceProvider)
-      .maybeSingle();
+    const normalizedUrl = product.originalUrl || product.affiliateUrl || '';
+    let existing: any = null;
+    let existingError: any = null;
+
+    if (product.externalProductId && product.sourceProvider) {
+      const result = await supabase
+        .from('products')
+        .select('id, deleted_at, deleted_reason')
+        .eq('external_product_id', product.externalProductId)
+        .eq('source_provider', product.sourceProvider)
+        .maybeSingle();
+      existing = result.data;
+      existingError = result.error;
+    }
+
+    if (!existing && normalizedUrl) {
+      const byUrl = await supabase
+        .from('products')
+        .select('id, deleted_at, deleted_reason')
+        .or(`original_url.eq.${normalizedUrl},affiliate_url.eq.${normalizedUrl}`)
+        .maybeSingle();
+      existing = byUrl.data;
+      existingError = byUrl.error || existingError;
+    }
+
     if (isMissingDeletedAtColumn(existingError)) {
       const fallback = await supabase
         .from('products')
         .select('id')
-        .eq('external_product_id', product.externalProductId)
-        .eq('source_provider', product.sourceProvider)
+        .eq('external_product_id', product.externalProductId || '')
+        .eq('source_provider', product.sourceProvider || '')
         .maybeSingle();
       existing = fallback.data as any;
       existingError = fallback.error;
@@ -414,6 +437,18 @@ export async function updateProduct(
         ...(updates.priceStale !== undefined && {
           price_stale: updates.priceStale,
         }),
+        ...(updates.importStatus !== undefined && {
+          import_status: updates.importStatus,
+        }),
+        ...(updates.enrichmentStatus !== undefined && {
+          enrichment_status: updates.enrichmentStatus,
+        }),
+        ...(updates.sourceFeedId !== undefined && {
+          source_feed_id: updates.sourceFeedId,
+        }),
+        ...(updates.parseErrors !== undefined && {
+          parse_errors: updates.parseErrors,
+        }),
         ...(updates.deletedAt !== undefined && {
           deleted_at: updates.deletedAt,
         }),
@@ -437,20 +472,42 @@ export async function updateProduct(
   }
 }
 
+async function deleteRelatedProductData(id: string, supabase: typeof supabaseAdmin) {
+  if (!supabase) return;
+  for (const table of ['price_history', 'product_clicks', 'price_search_results', 'trend_snapshots']) {
+    try {
+      await supabase.from(table).delete().eq('product_id', id);
+    } catch {
+      // Optional tables may not exist.
+    }
+  }
+}
+
 export async function deleteProduct(
   id: string,
+  options: { force?: boolean; reason?: string } = {},
   supabase = supabaseAdmin
 ): Promise<boolean> {
   if (!supabase) return false;
 
   try {
+    if (options.force) {
+      await deleteRelatedProductData(id, supabase);
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) {
+        console.error('Error hard deleting product:', error);
+        return false;
+      }
+      return true;
+    }
+
     let { error } = await supabase
       .from('products')
       .update({
         status: 'archived',
         is_active: false,
         deleted_at: new Date().toISOString(),
-        deleted_reason: 'admin_delete',
+        deleted_reason: options.reason || 'admin_delete',
       })
       .eq('id', id);
 

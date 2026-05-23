@@ -69,7 +69,8 @@ export async function DELETE(
     }
 
     const { id } = await context.params;
-    const deleted = await deleteProduct(id);
+    const force = request.nextUrl.searchParams.get('force') === 'true';
+    const deleted = await deleteProduct(id, { force, reason: force ? 'admin_force_delete' : 'admin_soft_delete' });
 
     if (!deleted) {
       return NextResponse.json(
@@ -80,7 +81,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Product deleted',
+      message: force ? 'Product hard deleted' : 'Product soft deleted',
     });
   } catch (error) {
     console.error('Error deleting product:', error);
