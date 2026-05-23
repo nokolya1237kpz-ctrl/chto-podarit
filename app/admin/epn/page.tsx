@@ -17,6 +17,9 @@ type EpnStatus = {
   tokenCached?: boolean;
   cooldownUntil?: string | null;
   captchaRequired?: boolean;
+  ssidExpiresAt?: string | null;
+  tokenExpiresAt?: string | null;
+  lastAuthDebug?: any;
 };
 
 type EpnOffer = {
@@ -138,6 +141,7 @@ export default function EpnAdminPage() {
       }
       setStatus(data);
       setMessage(data.message || 'Статус получен');
+      if (data.error) setError(data.error);
     } catch (err) {
       setStatus(null);
       setError(err instanceof Error ? err.message : 'Не удалось проверить статус');
@@ -457,7 +461,7 @@ export default function EpnAdminPage() {
         return;
       }
       updateOfferAction(offer.id, {
-        deeplinkMessage: 'Deeplink создан',
+        deeplinkMessage: 'Диплинк создан',
         deeplinkUrl: data.affiliateUrl || '',
         debug: {
           method: 'POST',
@@ -468,7 +472,7 @@ export default function EpnAdminPage() {
       });
     } catch (err) {
       updateOfferAction(offer.id, {
-        deeplinkError: err instanceof Error ? err.message : 'Ошибка создания deeplink',
+        deeplinkError: err instanceof Error ? err.message : 'Ошибка создания диплинка',
       });
     } finally {
       updateOfferAction(offer.id, { loadingDeeplink: false });
@@ -505,12 +509,13 @@ export default function EpnAdminPage() {
               <h2 className="text-2xl font-semibold text-white mt-2">ePN API</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <StatusRow label="Client ID" value={status?.hasClientId ? 'найден' : 'не найден'} />
-              <StatusRow label="Client Secret" value={status?.hasClientSecret ? 'найден' : 'не найден'} />
+              <StatusRow label="ID клиента" value={status?.hasClientId ? 'найден' : 'не найден'} />
+              <StatusRow label="Секрет клиента" value={status?.hasClientSecret ? 'найден' : 'не найден'} />
               <StatusRow label="SSID" value={status?.ssidReceived ? 'получен' : 'не получен'} />
-              <StatusRow label="Token" value={status?.tokenReceived ? 'получен' : 'не получен'} />
-              <StatusRow label="Token cache" value={status?.tokenCached ? 'cached' : 'empty'} />
-              <StatusRow label="Cooldown" value={status?.cooldownUntil ? new Date(status.cooldownUntil).toLocaleTimeString('ru-RU') : 'нет'} />
+              <StatusRow label="Токен" value={status?.tokenReceived ? 'получен' : 'не получен'} />
+              <StatusRow label="Кэш токена" value={status?.tokenCached ? 'есть' : 'пусто'} />
+              <StatusRow label="Токен истекает" value={status?.tokenExpiresAt ? new Date(status.tokenExpiresAt).toLocaleString('ru-RU') : '—'} />
+              <StatusRow label="Пауза" value={status?.cooldownUntil ? new Date(status.cooldownUntil).toLocaleTimeString('ru-RU') : 'нет'} />
               <StatusRow label="Подключение" value={status?.connected ? 'успешно' : 'отключено'} />
             </div>
             <button
@@ -529,6 +534,32 @@ export default function EpnAdminPage() {
             {status?.details && !error && (
               <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-200">{JSON.stringify(status.details)}</div>
             )}
+            {status?.lastAuthDebug ? (
+              <details className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-200">
+                <summary className="cursor-pointer select-none font-semibold text-slate-100">Показать OAuth debug</summary>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <StatusRow label="ENV Client ID" value={status.lastAuthDebug.env?.hasClientId ? 'загружен' : 'нет'} />
+                  <StatusRow label="ENV Client Secret" value={status.lastAuthDebug.env?.hasClientSecret ? 'загружен' : 'нет'} />
+                  <StatusRow label="OAuth endpoint" value={status.lastAuthDebug.env?.oauthBaseUrl || '—'} />
+                  <StatusRow label="API endpoint" value={status.lastAuthDebug.env?.apiBaseUrl || '—'} />
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="font-semibold text-slate-100">SSID endpoint</div>
+                    <pre className="mt-2 max-h-[240px] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">{JSON.stringify(status.lastAuthDebug.ssid || null, null, 2)}</pre>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-100">Token endpoint</div>
+                    <pre className="mt-2 max-h-[320px] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">{JSON.stringify(status.lastAuthDebug.token || null, null, 2)}</pre>
+                  </div>
+                  {status.lastAuthDebug.lastAuthError ? (
+                    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+                      Последняя OAuth ошибка: {status.lastAuthDebug.lastAuthError}
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
           </section>
 
           <section className="glass rounded-3xl p-6">
@@ -583,10 +614,10 @@ export default function EpnAdminPage() {
                       {offer.logo || offer.logoSmall ? (
                         <img src={offer.logo || offer.logoSmall} alt={`${offer.name} logo`} className="h-10 w-10 shrink-0 rounded-2xl border border-white/20 bg-slate-950 object-contain p-1" />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-xs text-slate-500">Logo</div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-xs text-slate-500">Лого</div>
                       )}
                       <span className="rounded-full border border-white/10 bg-slate-950/90 px-3 py-1 text-xs font-semibold text-white">
-                        {offer.marketplace || 'other'}
+                        {offer.marketplace || 'другое'}
                       </span>
                     </div>
                   </div>
@@ -594,27 +625,27 @@ export default function EpnAdminPage() {
                     <div>
                       <h4 className="text-sm font-semibold text-white line-clamp-2">{offer.name}</h4>
                       <p className="mt-1 text-xs text-slate-400">{offer.category || 'Без категории'}</p>
-                      <p className="mt-1 text-xs text-slate-500">Offer ID: {offer.id}</p>
+                      <p className="mt-1 text-xs text-slate-500">ID оффера: {offer.id}</p>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300">
                       <InfoCell label="Рейтинг" value={offer.rating ?? '—'} />
-                      <InfoCell label="Cookie" value={offer.cookieLive ?? '—'} />
+                      <InfoCell label="Срок cookie" value={offer.cookieLive ?? '—'} />
                       <InfoCell label="CR" value={offer.cr ?? '—'} />
                       <InfoCell label="Confirm" value={offer.confirm ?? '—'} />
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <StatusPill label="Creative" active={Boolean(offer.creativePlacement)} />
-                      <StatusPill label="Export" active={Boolean(offer.exportSupport)} />
-                      <StatusPill label="Deeplink" active={Boolean(offer.deeplinkSupport)} />
+                      <StatusPill label="Креативы" active={Boolean(offer.creativePlacement)} />
+                      <StatusPill label="Экспорт" active={Boolean(offer.exportSupport)} />
+                      <StatusPill label="Диплинк" active={Boolean(offer.deeplinkSupport)} />
                       <StatusPill label="Доступен" active={Boolean(offer.available)} />
                     </div>
 
                     <div className="mt-3 grid gap-1 text-xs text-slate-400">
                       <div>Статус экспорта: {offer.exportSupport ? 'Да' : 'Нет'}</div>
-                      <div>Creative support: {offer.creativePlacement ? 'Да' : 'Нет'}</div>
-                      <div>Available deeplink support: {offer.deeplinkSupport ? 'Да' : 'Нет'}</div>
+                      <div>Поддержка креативов: {offer.creativePlacement ? 'Да' : 'Нет'}</div>
+                      <div>Поддержка диплинка: {offer.deeplinkSupport ? 'Да' : 'Нет'}</div>
                     </div>
 
                     <div className="mt-4">
@@ -644,7 +675,7 @@ export default function EpnAdminPage() {
                         onToggle={(event) => updateOfferAction(offer.id, { debugOpen: event.currentTarget.open })}
                         className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300"
                       >
-                        <summary className="cursor-pointer select-none font-semibold text-slate-100">Показать debug</summary>
+                        <summary className="cursor-pointer select-none font-semibold text-slate-100">Показать технические детали</summary>
                         <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-slate-900 p-3">
                           {JSON.stringify(action.debug, null, 2)}
                         </pre>
@@ -684,7 +715,7 @@ export default function EpnAdminPage() {
                         disabled={Boolean(action.loadingDeeplink)}
                         className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                       >
-                        {action.loadingDeeplink ? '...' : 'Deeplink'}
+                          {action.loadingDeeplink ? '...' : 'Диплинк'}
                       </button>
                       {getEpnOfferUrl(offer) ? (
                         <a
@@ -717,20 +748,20 @@ export default function EpnAdminPage() {
               onToggle={(event) => setDebugOpen(event.currentTarget.open)}
               className="mt-6 rounded-3xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-200"
             >
-              <summary className="cursor-pointer select-none font-semibold text-slate-100">Debug API Response</summary>
+              <summary className="cursor-pointer select-none font-semibold text-slate-100">Показать технические детали API</summary>
               <div className="mt-4 space-y-3">
                 <div>
-                  <div className="font-semibold text-slate-100">Request URL</div>
+                  <div className="font-semibold text-slate-100">URL запроса</div>
                   <div className="break-all text-slate-300">{requestUrl}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-100">Request params</div>
+                  <div className="font-semibold text-slate-100">Параметры запроса</div>
                   <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
                     {JSON.stringify(requestParams, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-100">Response body</div>
+                  <div className="font-semibold text-slate-100">Ответ API</div>
                   <pre className="mt-2 max-h-[400px] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-3 text-xs text-slate-300">
                     {JSON.stringify(responseBody, null, 2)}
                   </pre>
@@ -782,21 +813,21 @@ export default function EpnAdminPage() {
                 return (
                   <div key={creative.id} className="flex w-full max-w-[520px] flex-col justify-self-center rounded-3xl border border-white/10 bg-slate-950/80 p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{creative.marketplace || 'other'}</span>
+                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{creative.marketplace || 'другое'}</span>
                       <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300">{creative.type || 'deeplink'}</span>
                     </div>
-                    <h4 className="mt-3 text-sm font-semibold text-white line-clamp-2">{creative.title || 'ePN creative'}</h4>
+                    <h4 className="mt-3 text-sm font-semibold text-white line-clamp-2">{creative.title || 'Креатив ePN'}</h4>
                     <div className="mt-3 grid gap-2 text-xs text-slate-400">
-                      <div>Token: <span className="text-slate-200">{creative.token || '—'}</span></div>
-                      <div>Offer: <span className="text-slate-200">{creative.offerName || creative.offerId || '—'}</span></div>
-                      <div>Created: <span className="text-slate-200">{creative.createdAt || '—'}</span></div>
+                      <div>Токен: <span className="text-slate-200">{creative.token || '—'}</span></div>
+                      <div>Оффер: <span className="text-slate-200">{creative.offerName || creative.offerId || '—'}</span></div>
+                      <div>Создан: <span className="text-slate-200">{creative.createdAt || '—'}</span></div>
                     </div>
                     <div className="mt-3 space-y-2 text-xs">
                       <a href={creative.originalUrl} target="_blank" rel="noreferrer" className="block break-all rounded-2xl border border-white/10 bg-white/5 p-3 text-slate-200 hover:bg-white/10">
-                        {creative.originalUrl || 'Нет original URL'}
+                        {creative.originalUrl || 'Нет исходного URL'}
                       </a>
                       <a href={creative.affiliateUrl || creative.deeplinkUrl} target="_blank" rel="noreferrer" className="block break-all rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-100 hover:bg-cyan-400/20">
-                        {creative.affiliateUrl || creative.deeplinkUrl || 'Нет deeplink URL'}
+                        {creative.affiliateUrl || creative.deeplinkUrl || 'Нет URL диплинка'}
                       </a>
                     </div>
                     {(action.error || action.message) ? (

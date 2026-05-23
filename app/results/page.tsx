@@ -92,7 +92,7 @@ export default async function ResultsPage({
           {matched.length === 0 ? (
             <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-8 text-center text-slate-300">
               <h2 className="text-xl font-semibold text-white">Каталог пока пуст</h2>
-              <p className="mt-2 text-sm text-slate-400">Добавьте товары в админке через URL import, файл или feed — после публикации подборки появятся здесь.</p>
+              <p className="mt-2 text-sm text-slate-400">Добавьте товары в админке через импорт по ссылкам, файл или фид — после публикации подборки появятся здесь.</p>
             </div>
           ) : null}
 

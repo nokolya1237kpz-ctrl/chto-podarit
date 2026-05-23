@@ -49,7 +49,7 @@ export default function RotatingHeroProducts({ products }: RotatingHeroProductsP
         <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.24em] text-purple-200">
           <span>Живая витрина</span>
           <span className="rounded-full border border-white/12 bg-white/6 px-3 py-1.5 text-[11px] text-slate-300">
-            {activeProducts.length ? `${activeProducts.length} active` : 'Демо'}
+            {activeProducts.length ? `${activeProducts.length} товаров` : 'Демо'}
           </span>
         </div>
 
@@ -87,7 +87,7 @@ function HeroProductCard({ product, variant, rotationKey }: { product: Product; 
       <div className={`relative ${isLarge ? 'mt-4' : 'min-w-0'}`}>
         <div className="flex items-start justify-between gap-3">
           <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
-            {product.marketplace || 'market'}
+            {product.marketplace || 'маркетплейс'}
           </span>
           <span className="shrink-0 rounded-full bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-3 py-1 text-xs font-bold text-white">
             {product.wowRating || 7}/10

@@ -30,14 +30,14 @@ export default function PriceSourcesPage() {
     setSamples(data.samples || {});
     const found = data.samples?.[id]?.length || 0;
     const latest = (data.diagnostics || []).filter((item: any) => item.provider === id).at(-1);
-    setMessage(`${id}: найдено ${found}, stage ${latest?.stage || '—'}, status ${latest?.status || 'unknown'}`);
+    setMessage(`${id}: найдено ${found}, этап ${latest?.stage || '—'}, статус ${latest?.status || 'неизвестно'}`);
   }
 
   return (
-    <AdminShell title="Price sources">
+    <AdminShell title="Источники цен">
       <div className="space-y-6">
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6">
-          <label className="text-sm text-slate-300">Test query</label>
+          <label className="text-sm text-slate-300">Тестовый запрос</label>
           <input value={testQuery} onChange={(event) => setTestQuery(event.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white" />
           {message ? <div className="mt-4 rounded-2xl bg-white/5 p-3 text-sm text-slate-200">{message}</div> : null}
         </div>
@@ -48,28 +48,28 @@ export default function PriceSourcesPage() {
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-xl font-semibold">{source.name}</h2>
-                  <p className="mt-1 text-sm text-slate-400">status: {source.enabled ? source.status : 'disabled'}</p>
+                  <p className="mt-1 text-sm text-slate-400">Статус: {source.enabled ? translateStatus(source.status) : 'выключен'}</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <button onClick={() => setSources((prev) => prev.map((item) => item.id === source.id ? { ...item, enabled: !item.enabled } : item))} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm">
-                    {source.enabled ? 'Disable' : 'Enable'}
+                    {source.enabled ? 'Выключить' : 'Включить'}
                   </button>
                   <button onClick={() => testSource(source.id)} className="rounded-2xl bg-purple-600 px-4 py-2 text-sm font-semibold">
-                    Test parser
+                    Проверить источник
                   </button>
                 </div>
               </div>
               <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2">
-                <Field label="allowedDomains" value={source.allowedDomains} />
-                <Field label="searchUrlTemplate" value={source.searchUrlTemplate} />
-                <Field label="selectors" value="metadata/json/public endpoint" />
-                <Field label="crawlDelaySeconds" value={String(source.crawlDelaySeconds)} />
-                <Field label="maxRequestsPerHour" value={String(source.maxRequestsPerHour)} />
-                <Field label="cacheTtlMinutes" value={String(source.cacheTtlMinutes)} />
-                <Field label="last error" value="—" />
+                <Field label="Разрешённые домены" value={source.allowedDomains} />
+                <Field label="Шаблон поиска" value={source.searchUrlTemplate} />
+                <Field label="Правила чтения" value="metadata/json/public endpoint" />
+                <Field label="Пауза между запросами" value={String(source.crawlDelaySeconds)} />
+                <Field label="Запросов в час" value={String(source.maxRequestsPerHour)} />
+                <Field label="Кэш, минут" value={String(source.cacheTtlMinutes)} />
+                <Field label="Последняя ошибка" value="—" />
               </div>
               <details className="mt-4 min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-950 p-4">
-                <summary className="cursor-pointer text-sm font-semibold">Diagnostics</summary>
+                <summary className="cursor-pointer text-sm font-semibold">Показать технические детали</summary>
                 <pre className="mt-3 max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-words text-xs text-slate-300">{JSON.stringify(diagnostics.filter((item) => item.provider === source.id), null, 2)}</pre>
                 <div className="mt-3 grid gap-2">
                   {(samples[source.id] || []).slice(0, 3).map((product, index) => (
@@ -85,6 +85,14 @@ export default function PriceSourcesPage() {
       </div>
     </AdminShell>
   );
+}
+
+function translateStatus(status: string) {
+  if (status === 'active') return 'работает';
+  if (status === 'limited') return 'ограничен';
+  if (status === 'error') return 'ошибка';
+  if (status === 'disabled') return 'выключен';
+  return status;
 }
 
 function Field({ label, value }: { label: string; value: string }) {

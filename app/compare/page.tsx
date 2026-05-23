@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SafeProductImage from '@/components/SafeProductImage';
 import type { Product } from '@/types/product';
 
 type SearchResponse = {
@@ -56,7 +57,7 @@ function CompareContent() {
       const body = await res.json();
       setData(body);
       saveSearch(nextQuery);
-      if (!body.success) setMessage(body.error || 'Ошибка поиска');
+      if (!body.success) setMessage(friendlyError(body.error || 'Ошибка поиска'));
     } finally {
       setLoading(false);
     }
@@ -133,8 +134,8 @@ function CompareContent() {
       <Header />
       <main className="mx-auto max-w-7xl overflow-x-hidden px-4 pb-20 pt-28">
         <section className="sticky top-24 z-20 rounded-[2rem] border border-white/10 bg-slate-900/90 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:p-6">
-          <p className="text-sm uppercase tracking-[0.3em] text-purple-300">Compare</p>
-          <h1 className="mt-3 text-4xl font-bold">Сравнение цен</h1>
+          <p className="text-sm uppercase tracking-[0.3em] text-purple-300">Сравнение цен</p>
+          <h1 className="mt-3 text-4xl font-bold">Найдите выгодную цену</h1>
           <form onSubmit={search} className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_140px_140px_160px_auto]">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Наушники, косметика, автоаксессуары..." className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3" />
             <select value={marketplace} onChange={(event) => setMarketplace(event.target.value)} className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3">
@@ -142,34 +143,25 @@ function CompareContent() {
               <option value="wildberries">WB</option>
               <option value="ozon">Ozon</option>
               <option value="aliexpress">AliExpress</option>
-              <option value="yandex_market">Маркет</option>
+              <option value="yandex_market">Яндекс Маркет</option>
             </select>
             <input value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="от" type="number" className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3" />
             <input value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="до" type="number" className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3" />
             <select value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3">
-              <option value="price_asc">Сначала дешевые</option>
+              <option value="price_asc">Сначала дешёвые</option>
               <option value="relevance">Релевантность</option>
             </select>
-            <button disabled={loading} className="rounded-2xl bg-purple-600 px-5 py-3 font-semibold disabled:opacity-50">{loading ? 'Поиск...' : 'Найти'}</button>
+            <button disabled={loading} className="rounded-2xl bg-purple-600 px-5 py-3 font-semibold disabled:opacity-50">{loading ? 'Ищем...' : 'Найти'}</button>
           </form>
           {message ? <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">{message}</div> : null}
-          {data?.sourceStats ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {Object.entries(data.sourceStats).map(([source, stat]) => (
-                <span key={source} className={`rounded-full px-3 py-1 text-xs font-semibold ${stat.status === 'limited' ? 'bg-amber-500/15 text-amber-100' : stat.status === 'error' ? 'bg-red-500/15 text-red-100' : 'bg-white/5 text-cyan-100'}`}>
-                  {source}: {stat.count} {stat.status}
-                </span>
-              ))}
-            </div>
-          ) : null}
           {data && Object.values(data.sourceStats || {}).some((stat) => stat.status === 'limited') ? (
             <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
               Часть источников временно ограничила запросы. Показываем доступные локальные и внешние результаты.
             </div>
           ) : null}
-          {data?.diagnostics?.length ? (
+          {process.env.NODE_ENV !== 'production' && data?.diagnostics?.length ? (
             <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950 p-4">
-              <summary className="cursor-pointer text-sm font-semibold">Source stats и diagnostics</summary>
+              <summary className="cursor-pointer text-sm font-semibold">Показать технические детали</summary>
               <pre className="mt-3 max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words text-xs text-slate-300">{JSON.stringify({ sourceStats: data.sourceStats, diagnostics: data.diagnostics }, null, 2)}</pre>
             </details>
           ) : null}
@@ -189,9 +181,7 @@ function CompareContent() {
                   const url = product.affiliateUrl || product.originalUrl || '#';
                   return (
                     <article key={`${group.id}-${product.id}-${index}`} className="grid min-w-0 gap-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-300/25 md:grid-cols-[140px_minmax(0,1fr)_auto]">
-                      <div className="flex h-28 items-center justify-center rounded-2xl bg-white">
-                        {product.imageUrl ? <img src={product.imageUrl} alt={product.title} className="h-full w-full object-contain p-2" /> : null}
-                      </div>
+                      <SafeProductImage imageUrl={product.imageUrl} alt={product.title} wrapperClassName="flex h-28 items-center justify-center rounded-2xl bg-white" className="h-full w-full object-contain p-2" />
                       <div className="min-w-0">
                         <div className="flex flex-wrap gap-2">
                           {index === 0 ? <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">Лучшая цена</span> : null}
@@ -217,7 +207,7 @@ function CompareContent() {
                           Открыть товар
                         </a>
                         <button onClick={() => toggleStored('favoriteProducts', product)} className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100 md:w-auto">
-                          {favorites.includes(String(product.id || product.externalProductId || product.originalUrl)) ? 'В избранном' : '❤️ Избранное'}
+                          {favorites.includes(String(product.id || product.externalProductId || product.originalUrl)) ? 'В избранном' : 'В избранное'}
                         </button>
                         <button onClick={() => toggleStored('priceWatchlist', product)} className="w-full rounded-full border border-cyan-300/20 bg-cyan-400/10 px-5 py-2 text-sm font-semibold text-cyan-100 md:w-auto">
                           Следить за ценой
@@ -235,7 +225,7 @@ function CompareContent() {
           {!loading && data && groups.length === 0 ? (
             <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-8 text-center text-slate-300">
               <p className="text-lg font-semibold text-white">Пока ничего не найдено</p>
-              <p className="mt-2 text-sm text-slate-400">Если внешний источник ограничил запрос, причина будет в diagnostics. Локальные товары появятся здесь, когда совпадут с запросом.</p>
+              <p className="mt-2 text-sm text-slate-400">Попробуйте изменить запрос или вернитесь позже: часть источников может временно ограничивать запросы.</p>
             </div>
           ) : null}
         </section>
@@ -243,6 +233,13 @@ function CompareContent() {
       <Footer />
     </div>
   );
+}
+
+function friendlyError(error: string) {
+  if (/failed to fetch|network|fetch/i.test(error)) {
+    return 'Не удалось получить данные. Источник временно ограничил запросы или недоступен.';
+  }
+  return error;
 }
 
 function CompareShellFallback() {

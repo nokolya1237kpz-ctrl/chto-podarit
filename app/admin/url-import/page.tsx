@@ -24,7 +24,7 @@ export default function UrlImportPage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || 'Импорт ссылок не выполнен');
       setReports(data.reports || []);
-      setMessage(`Готово: импортировано ${data.imported || 0}, active ${data.active || 0}, draft ${data.drafted || 0}, ошибок ${data.failed || 0}`);
+      setMessage(`Готово: импортировано ${data.imported || 0}, активных ${data.active || 0}, черновиков ${data.drafted || 0}, ошибок ${data.failed || 0}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
     } finally {
@@ -33,13 +33,13 @@ export default function UrlImportPage() {
   }
 
   return (
-    <AdminShell title="URL import">
+    <AdminShell title="Импорт по ссылкам">
       <div className="space-y-6">
         {message ? <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
         <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
           <h2 className="text-xl font-semibold">Импорт по ссылкам</h2>
-          <p className="mt-2 text-sm text-slate-400">До 100 публичных product URL за раз. Если нет цены или картинки, товар сохранится как черновик.</p>
+          <p className="mt-2 text-sm text-slate-400">До 100 публичных ссылок товаров за раз. Если нет цены или картинки, товар сохранится как черновик.</p>
           <textarea
             value={urls}
             onChange={(event) => setUrls(event.target.value)}
@@ -60,18 +60,18 @@ function ReportTable({ reports }: { reports: any[] }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
       <h2 className="text-xl font-semibold">Отчёт</h2>
-      <div className="mt-4 overflow-x-auto">
+      <div className="table-shell mt-4">
         <table className="w-full text-sm">
           <thead className="text-left text-slate-400">
             <tr>
               <th className="p-2">URL</th>
-              <th className="p-2">marketplace</th>
-              <th className="p-2">title</th>
-              <th className="p-2">image</th>
-              <th className="p-2">price</th>
-              <th className="p-2">active</th>
-              <th className="p-2">draft</th>
-              <th className="p-2">error</th>
+              <th className="p-2">Маркетплейс</th>
+              <th className="p-2">Название</th>
+              <th className="p-2">Картинка</th>
+              <th className="p-2">Цена</th>
+              <th className="p-2">Активен</th>
+              <th className="p-2">Черновик</th>
+              <th className="p-2">Ошибка</th>
             </tr>
           </thead>
           <tbody>
@@ -79,11 +79,11 @@ function ReportTable({ reports }: { reports: any[] }) {
               <tr key={index} className="border-t border-white/10">
                 <td className="max-w-xs truncate p-2">{row.url}</td>
                 <td className="p-2">{row.marketplace}</td>
-                <td className="p-2">{row.titleFound ? 'yes' : 'no'}</td>
-                <td className="p-2">{row.imageFound ? 'yes' : 'no'}</td>
-                <td className="p-2">{row.priceFound ? 'yes' : 'no'}</td>
-                <td className="p-2">{row.createdActive ? 'yes' : 'no'}</td>
-                <td className="p-2">{row.createdDraft ? 'yes' : 'no'}</td>
+                <td className="p-2">{row.titleFound ? 'да' : 'нет'}</td>
+                <td className="p-2">{row.imageFound ? 'да' : 'нет'}</td>
+                <td className="p-2">{row.priceFound ? 'да' : 'нет'}</td>
+                <td className="p-2">{row.createdActive ? 'да' : 'нет'}</td>
+                <td className="p-2">{row.createdDraft ? 'да' : 'нет'}</td>
                 <td className="p-2 text-rose-200">{row.error || ''}</td>
               </tr>
             ))}

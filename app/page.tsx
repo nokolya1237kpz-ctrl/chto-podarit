@@ -4,6 +4,7 @@ import PopularCollections from '../components/PopularCollections';
 import LottiePlayer from '../components/LottiePlayer';
 import ScrollReveal from '../components/ScrollReveal';
 import RotatingHeroProducts from '../components/RotatingHeroProducts';
+import SafeProductImage from '@/components/SafeProductImage';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { enrichTrendProduct, getPopularClickCounts, shuffleProducts } from '@/lib/trends';
@@ -49,7 +50,7 @@ export default async function Home() {
                     <div className="bg-gradient-to-r from-purple-300 via-pink-300 to-fuchsia-300 bg-clip-text pb-1 text-transparent break-words">идеальный подарок</div>
                     <div className="text-[0.72em] text-white drop-shadow-[0_0_22px_rgba(255,255,255,0.18)] whitespace-normal break-words">за 30 секунд</div>
                   </h1>
-                  <p className="text-base sm:text-lg leading-7 sm:leading-8 text-slate-300 w-full max-w-2xl font-light">Ответьте на 5 вопросов и получите 10 персональных идей с ценами, вау‑рейтингом и ссылками на товары.</p>
+                  <p className="text-base sm:text-lg leading-7 sm:leading-8 text-slate-300 w-full max-w-2xl font-light">Быстрый AI-подбор подарков с ценами, рейтингом и ссылками на маркетплейсы.</p>
                   <p className="max-w-xl text-sm leading-6 text-slate-400">Подборка собирается из реальных товаров и помогает быстро выбрать подарок под человека, повод и бюджет.</p>
                 </div>
 
@@ -103,7 +104,7 @@ export default async function Home() {
           <section className="overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-slate-950/82 p-5 shadow-[0_32px_110px_rgba(6,182,212,0.14)] backdrop-blur-2xl sm:p-7">
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Price compare</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Сравнение цен</p>
                 <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Сравните цены перед покупкой</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Введите название товара — мы проверим доступные источники и покажем, где дешевле.</p>
               </div>
@@ -147,9 +148,9 @@ export default async function Home() {
             <PopularCollections />
           </section>
 
-          <ProductRail title="Тренды TikTok и WB" subtitle="Viral, hit и небанальные идеи из каталога" products={trendingProducts.length ? trendingProducts : randomProducts} />
-          <ProductRail title="Cheapest today" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
-          <ProductRail title="Recently added" subtitle="Свежие active товары, готовые к кликам" products={newArrivals.length ? newArrivals : randomProducts} />
+          <ProductRail title="Тренды TikTok и WB" subtitle="Вирусные хиты и небанальные идеи из каталога" products={trendingProducts.length ? trendingProducts : randomProducts} />
+          <ProductRail title="Самые выгодные сегодня" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
+          <ProductRail title="Новинки" subtitle="Свежие опубликованные товары, готовые к просмотрам" products={newArrivals.length ? newArrivals : randomProducts} />
 
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_32px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -171,8 +172,6 @@ export default async function Home() {
 }
 
 function ProductRail({ title, subtitle, products }: { title: string; subtitle: string; products: Product[] }) {
-  if (products.length === 0) return null;
-
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -181,6 +180,13 @@ function ProductRail({ title, subtitle, products }: { title: string; subtitle: s
           <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
         </div>
       </div>
+      {products.length === 0 ? (
+        <div className="empty-state rounded-3xl p-8 text-center">
+          <p className="text-lg font-semibold text-white">Пока нет товаров</p>
+          <p className="mt-2 text-sm text-slate-400">Импортируйте фид или добавьте ссылку, и витрина появится здесь.</p>
+          <a href="/admin/url-import" className="mt-5 inline-flex rounded-full bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15">Добавить товары</a>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((product) => (
           <a
@@ -190,9 +196,7 @@ function ProductRail({ title, subtitle, products }: { title: string; subtitle: s
             rel={product.affiliateUrl || product.originalUrl ? 'noopener noreferrer' : undefined}
             className="group rounded-3xl border border-white/10 bg-slate-950/80 p-4 transition hover:-translate-y-1 hover:border-purple-300/30 hover:shadow-[0_30px_100px_rgba(124,58,237,0.18)]"
           >
-            <div className="flex h-44 items-center justify-center rounded-2xl bg-white">
-              {product.imageUrl ? <img src={product.imageUrl} alt={product.title} className="h-full w-full object-contain p-3" loading="lazy" /> : null}
-            </div>
+            <SafeProductImage imageUrl={product.imageUrl} alt={product.title} wrapperClassName="flex h-44 items-center justify-center rounded-2xl bg-white" className="h-full w-full object-contain p-3" />
             <div className="mt-4 flex items-center justify-between gap-3">
               <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-cyan-100">{product.marketplace}</span>
               <span className="text-xs font-semibold text-purple-200">{product.wowRating}/10</span>

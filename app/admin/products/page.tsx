@@ -213,14 +213,14 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-          <p className="text-sm font-semibold text-white">Cleanup tools</p>
+          <p className="text-sm font-semibold text-white">Инструменты очистки</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {[
-              ['draft_feed', 'Удалить draft feed товары'],
-              ['no_image', 'Удалить без image'],
-              ['zero_price', 'Удалить price=0'],
-              ['soft_deleted', 'Удалить soft deleted'],
-              ['failed_imports', 'Очистить failed imports'],
+              ['draft_feed', 'Удалить черновики из фидов'],
+              ['no_image', 'Удалить без картинки'],
+              ['zero_price', 'Удалить с ценой 0'],
+              ['soft_deleted', 'Удалить скрытые'],
+              ['failed_imports', 'Очистить неудачные импорты'],
             ].map(([action, label]) => (
               <button key={action} onClick={() => handleCleanup(action)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 hover:bg-white/10">
                 {label}
@@ -248,7 +248,7 @@ export default function AdminProductsPage() {
               <option value="">Все маркетплейсы</option>
               <option value="ozon">Ozon</option>
               <option value="wildberries">Wildberries</option>
-              <option value="yandex_market">Yandex.Market</option>
+              <option value="yandex_market">Яндекс Маркет</option>
               <option value="aliexpress">AliExpress</option>
               <option value="amazon">Amazon</option>
               <option value="other">Другой</option>
@@ -259,11 +259,11 @@ export default function AdminProductsPage() {
               className="px-4 py-2 bg-slate-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
             >
               <option value="">Все источники</option>
-              <option value="manual">Manual</option>
+              <option value="manual">Вручную</option>
               <option value="admitad">Admitad</option>
               <option value="api">API</option>
-              <option value="feed">Feed</option>
-              <option value="search_api">Search API</option>
+              <option value="feed">Фид</option>
+              <option value="search_api">Поисковый API</option>
             </select>
             <select
               value={status}
@@ -293,9 +293,9 @@ export default function AdminProductsPage() {
         {loading ? (
           <div className="text-center py-12">Загрузка...</div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-white/10 bg-slate-900">
+          <div className="table-shell rounded-lg bg-slate-900">
             <table className="w-full">
-              <thead className="bg-slate-800">
+              <thead className="sticky top-0 bg-slate-800">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Название</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Цена</th>
@@ -312,15 +312,15 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 text-sm">
                       <div>{product.title}</div>
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {product.sourceType === 'feed' ? <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-100">imported</span> : null}
-                        {product.status === 'draft' ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-100">draft</span> : null}
-                        {(!product.imageUrl || !product.price) ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] text-rose-100">incomplete</span> : null}
-                        {product.enrichmentStatus === 'enriched' ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-100">enriched</span> : null}
+                        {product.sourceType === 'feed' ? <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-100">импортирован</span> : null}
+                        {product.status === 'draft' ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-100">черновик</span> : null}
+                        {(!product.imageUrl || !product.price) ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] text-rose-100">неполный</span> : null}
+                        {product.enrichmentStatus === 'enriched' ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-100">обогащён</span> : null}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm">{product.price.toLocaleString('ru-RU')} ₽</td>
                     <td className="px-6 py-4 text-sm">{getMarketplaceName(product.marketplace)}</td>
-                    <td className="px-6 py-4 text-sm text-purple-300">{product.sourceType}</td>
+                    <td className="px-6 py-4 text-sm text-purple-300">{translateSourceType(product.sourceType)}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={product.status === 'active' ? 'text-green-400' : product.status === 'archived' ? 'text-slate-400' : 'text-yellow-300'}>
                         {product.status === 'active' ? 'Опубликован' : product.status === 'archived' ? 'Архив' : 'Черновик'}
@@ -367,7 +367,7 @@ export default function AdminProductsPage() {
                           onClick={() => handleMarkTrend(product)}
                           className="text-cyan-300 hover:text-cyan-200"
                         >
-                          Trend
+                          Тренд
                         </button>
                       ) : null}
                       <button
@@ -390,4 +390,12 @@ export default function AdminProductsPage() {
       </div>
     </AdminShell>
   );
+}
+
+function translateSourceType(sourceType?: string) {
+  if (sourceType === 'manual') return 'Вручную';
+  if (sourceType === 'feed') return 'Фид';
+  if (sourceType === 'search_api') return 'Поисковый API';
+  if (sourceType === 'api') return 'API';
+  return sourceType || '—';
 }

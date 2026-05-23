@@ -52,7 +52,7 @@ export default function BulkImportPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Импорт не выполнен');
       }
-      setMessage(`${name}: импортировано ${data.imported || 0}, обновлено ${data.updated || 0}, active ${data.importedActive || 0}, draft ${data.importedDraft || data.drafted || 0}, skipped duplicates ${data.skippedDuplicate || 0}, ошибок ${data.errors || data.failed || 0}`);
+      setMessage(`${name}: импортировано ${data.imported || 0}, обновлено ${data.updated || 0}, активных ${data.importedActive || 0}, черновиков ${data.importedDraft || data.drafted || 0}, дублей пропущено ${data.skippedDuplicate || 0}, ошибок ${data.errors || data.failed || 0}`);
       setReportRows(data.rows || data.reports || []);
     } catch (err) {
       const text = err instanceof Error ? err.message : 'Ошибка импорта';
@@ -63,7 +63,7 @@ export default function BulkImportPage() {
   }
 
   return (
-    <AdminShell title="Bulk import">
+    <AdminShell title="Массовый импорт">
       <div className="space-y-6">
         {message ? <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
@@ -85,12 +85,12 @@ export default function BulkImportPage() {
 
         <section className="grid gap-6 xl:grid-cols-2">
           {activeTab === 'search' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="text-xl font-semibold">Поисковый API / ePN approved</h2>
-            <p className="mt-2 text-sm text-slate-400">Search API растит базу из публичных URL. ePN используем аккуратно: approved offers, creatives, hot goods и cooldown.</p>
+            <h2 className="text-xl font-semibold">Поисковый API / ePN</h2>
+            <p className="mt-2 text-sm text-slate-400">Поисковый API растит базу из публичных ссылок. ePN используем аккуратно: одобренные офферы, креативы, горячие товары и пауза при ограничениях.</p>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="search query: наушники, косметика..."
+              placeholder="Запрос: наушники, косметика..."
               className="mt-4 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white"
             />
             <div className="mt-4 flex flex-wrap gap-3">
@@ -106,7 +106,7 @@ export default function BulkImportPage() {
                 onClick={() => runImport('ePN trending', '/api/admin/epn/import-hot', { query: query || 'подарок', limit: 10 })}
                 className="rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
               >
-                Hot/trending
+                Горячие товары
               </button>
               <button
                 disabled={loading === '10 товаров'}
@@ -131,8 +131,8 @@ export default function BulkImportPage() {
           </div> : null}
 
           {activeTab === 'feed' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="text-xl font-semibold">Feeds</h2>
-            <p className="mt-2 text-sm text-slate-400">JSON, CSV, XML, YML, Google Merchant и RSS-like feeds.</p>
+            <h2 className="text-xl font-semibold">Фиды</h2>
+            <p className="mt-2 text-sm text-slate-400">JSON, CSV, XML, YML, Google Merchant и RSS-подобные фиды.</p>
             <input
               value={feedUrl}
               onChange={(event) => setFeedUrl(event.target.value)}
@@ -144,14 +144,14 @@ export default function BulkImportPage() {
               onClick={() => runImport('feed', '/api/admin/bulk-import/feed', { url: feedUrl, sourceProvider: 'feed' })}
               className="mt-4 rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Импортировать feed URL
+              Импортировать фид
             </button>
-            <a href="/admin/feeds" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть feeds</a>
+            <a href="/admin/feeds" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть фиды</a>
           </div> : null}
 
           {activeTab === 'links' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="text-xl font-semibold">По ссылкам</h2>
-            <p className="mt-2 text-sm text-slate-400">Главный production-safe путь: публичные product pages, metadata/JSON-LD, draft если не хватает цены или картинки.</p>
+            <p className="mt-2 text-sm text-slate-400">Главный устойчивый путь: публичные страницы товаров, metadata/JSON-LD, черновик если не хватает цены или картинки.</p>
             <textarea
               value={manualUrls}
               onChange={(event) => setManualUrls(event.target.value)}
@@ -163,20 +163,20 @@ export default function BulkImportPage() {
               onClick={() => runImport('URL', '/api/admin/bulk-import/url', { urls: manualUrls.split(/\s+/).filter(Boolean) })}
               className="mt-4 rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Импортировать URL
+              Импортировать ссылки
             </button>
-            <a href="/admin/url-import" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть URL import</a>
+            <a href="/admin/url-import" className="ml-3 inline-flex rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white">Открыть импорт по ссылкам</a>
           </div> : null}
 
           {activeTab === 'file' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="text-xl font-semibold">Файл CSV/XLSX/JSON</h2>
-            <p className="mt-2 text-sm text-slate-400">Самый быстрый способ загрузить 1000+ товаров с preview и mapping колонок.</p>
+            <p className="mt-2 text-sm text-slate-400">Самый быстрый способ загрузить 1000+ товаров с предпросмотром и сопоставлением колонок.</p>
             <a href="/admin/import-file" className="mt-4 inline-flex rounded-2xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white">Открыть импорт файла</a>
           </div> : null}
 
           {activeTab === 'search' ? <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="text-xl font-semibold">Импортировать категории</h2>
-            <p className="mt-2 text-sm text-slate-400">Для быстрого старта лучше search API, feeds и URL import. Прямой parser маркетплейсов optional.</p>
+            <p className="mt-2 text-sm text-slate-400">Для быстрого старта лучше поисковый API, фиды и импорт по ссылкам. Прямой парсер маркетплейсов необязателен.</p>
             <textarea
               value={categories}
               onChange={(event) => setCategories(event.target.value)}
@@ -192,8 +192,8 @@ export default function BulkImportPage() {
           </div> : null}
 
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="text-xl font-semibold">Fast start</h2>
-            <p className="mt-2 text-sm text-slate-400">Curated demo catalog на 300 товаров: реальные названия и категории, без фейковых ссылок, всё уходит в draft.</p>
+            <h2 className="text-xl font-semibold">Быстрый старт</h2>
+            <p className="mt-2 text-sm text-slate-400">Подготовленный демо-каталог на 300 товаров: реальные названия и категории, без фейковых ссылок, всё сохраняется в черновики.</p>
             <button
               disabled={loading === 'demo catalog'}
               onClick={() => runImport('demo catalog', '/api/admin/demo-catalog', {})}
@@ -212,17 +212,17 @@ export default function BulkImportPage() {
                 <a href="/admin/drafts" className="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-white">Открыть черновики</a>
               </div>
             </div>
-            <div className="mt-4 overflow-x-auto">
+            <div className="table-shell mt-4">
               <table className="w-full text-sm">
                 <thead className="text-left text-slate-400">
                   <tr>
-                    <th className="p-2">source</th>
-                    <th className="p-2">query/url</th>
-                    <th className="p-2">found</th>
-                    <th className="p-2">active</th>
-                    <th className="p-2">draft</th>
-                    <th className="p-2">skipped</th>
-                    <th className="p-2">error</th>
+                    <th className="p-2">Источник</th>
+                    <th className="p-2">Запрос/URL</th>
+                    <th className="p-2">Найдено</th>
+                    <th className="p-2">Активных</th>
+                    <th className="p-2">Черновиков</th>
+                    <th className="p-2">Пропущено</th>
+                    <th className="p-2">Ошибка</th>
                   </tr>
                 </thead>
                 <tbody>

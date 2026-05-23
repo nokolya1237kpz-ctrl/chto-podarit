@@ -6,8 +6,16 @@ import SafeProductImage from '@/components/SafeProductImage';
 
 export default function GiftCard({ gift }: { gift: Product }) {
   const [copied, setCopied] = React.useState(false);
+  const [favorite, setFavorite] = React.useState(false);
   const productUrl = getProductFinalUrl(gift);
   const hasProductUrl = Boolean(productUrl);
+  const discountPercent = gift.oldPrice && gift.price ? Math.max(0, Math.round(((gift.oldPrice - gift.price) / gift.oldPrice) * 100)) : 0;
+  const riskLabel = gift.riskLevel === 'low' ? 'низкий риск' : gift.riskLevel === 'medium' ? 'средний риск' : 'высокий риск';
+
+  React.useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('favoriteProducts') || '[]') as string[];
+    setFavorite(stored.includes(String(gift.id)));
+  }, [gift.id]);
 
   const copy = async () => {
     try {
@@ -17,6 +25,14 @@ export default function GiftCard({ gift }: { gift: Product }) {
     } catch {
       // noop
     }
+  };
+
+  const toggleFavorite = () => {
+    const id = String(gift.id);
+    const stored = JSON.parse(localStorage.getItem('favoriteProducts') || '[]') as string[];
+    const next = stored.includes(id) ? stored.filter((item) => item !== id) : [id, ...stored].slice(0, 200);
+    localStorage.setItem('favoriteProducts', JSON.stringify(next));
+    setFavorite(next.includes(id));
   };
 
   const riskColor = gift.riskLevel === 'low'
@@ -48,6 +64,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
             {gift.oldPrice && (
               <p className="mt-1 text-xs text-slate-400 line-through">{Math.round(gift.oldPrice).toLocaleString('ru-RU')} ₽</p>
             )}
+            {discountPercent > 0 ? <p className="mt-2 inline-flex rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100">-{discountPercent}%</p> : null}
           </div>
 
           <div className="rounded-[1.75rem] bg-gradient-to-br from-purple-500/15 to-pink-500/15 border border-white/10 px-5 py-4 text-center text-slate-200 shadow-[0_12px_40px_rgba(124,58,237,0.12)] transition">
@@ -56,7 +73,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
           </div>
 
           <div className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-center border transition ${riskColor}`}>
-            {gift.riskLevel}
+            {riskLabel}
           </div>
         </div>
 
@@ -78,12 +95,19 @@ export default function GiftCard({ gift }: { gift: Product }) {
 
           <button
             type="button"
-            onClick={copy}
+            onClick={toggleFavorite}
             className="inline-flex flex-1 items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 py-3.5 text-sm font-medium text-slate-100 transition hover:bg-white/8 hover:border-white/16 hover:text-white backdrop-blur-sm"
           >
-            {copied ? 'Скопировано' : 'Скопировать'}
+            {favorite ? 'В избранном' : 'В избранное'}
           </button>
         </div>
+        <button
+          type="button"
+          onClick={copy}
+          className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+        >
+          {copied ? 'Скопировано' : 'Скопировать идею'}
+        </button>
       </div>
     </article>
   );

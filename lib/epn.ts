@@ -11,7 +11,34 @@ interface EpnTokenCache {
   captchaRequired?: boolean;
   cooldownUntil?: number;
   importJobRunning?: boolean;
+  lastAuthDebug?: EpnAuthDebug;
 }
+
+type EpnAuthDebug = {
+  env: {
+    hasClientId: boolean;
+    hasClientSecret: boolean;
+    apiBaseUrl: string;
+    oauthBaseUrl: string;
+  };
+  ssid?: {
+    method: 'GET';
+    url: string;
+    status?: number;
+    responseBody?: any;
+  };
+  token?: {
+    method: 'POST';
+    url: string;
+    grantType: string;
+    headers: Record<string, string>;
+    requestBody: Record<string, any>;
+    status?: number;
+    responseBody?: any;
+  };
+  tokenExpiresAt?: string | null;
+  lastAuthError?: string;
+};
 
 export interface EpnStatusResult {
   success: boolean;
@@ -26,6 +53,9 @@ export interface EpnStatusResult {
   tokenCached?: boolean;
   cooldownUntil?: string | null;
   captchaRequired?: boolean;
+  ssidExpiresAt?: string | null;
+  tokenExpiresAt?: string | null;
+  lastAuthDebug?: EpnAuthDebug;
 }
 
 export interface EpnOffer {
@@ -102,6 +132,30 @@ class EpnApiError extends Error {
 const tokenCache: EpnTokenCache = {};
 const EPN_CAPTCHA_MESSAGE = 'ePN временно требует капчу. Остановите импорт и попробуйте позже.';
 
+function getMasked(value?: string) {
+  if (!value) return '';
+  if (value.length <= 6) return '***';
+  return `${value.slice(0, 3)}***${value.slice(-3)}`;
+}
+
+function getBasicAuthHeader(clientId: string, clientSecret: string) {
+  return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+}
+
+function setLastAuthDebug(update: Partial<EpnAuthDebug>) {
+  const config = getEpnConfig();
+  tokenCache.lastAuthDebug = {
+    env: {
+      hasClientId: Boolean(config.clientId),
+      hasClientSecret: Boolean(config.clientSecret),
+      apiBaseUrl: config.apiBaseUrl,
+      oauthBaseUrl: config.oauthBaseUrl,
+    },
+    ...tokenCache.lastAuthDebug,
+    ...update,
+  };
+}
+
 function isEpnCaptchaBody(body: any) {
   const text = typeof body === 'string' ? body : JSON.stringify(body || {});
   return text.toLowerCase().includes('captcha') || text.toLowerCase().includes('need captcha');
@@ -125,6 +179,9 @@ export function getEpnRuntimeStatus() {
     cooldownUntil: cooldownActive && tokenCache.cooldownUntil ? new Date(tokenCache.cooldownUntil).toISOString() : null,
     captchaRequired: Boolean(tokenCache.captchaRequired && cooldownActive),
     importJobRunning: Boolean(tokenCache.importJobRunning),
+    ssidExpiresAt: tokenCache.ssidExpiresAt ? new Date(tokenCache.ssidExpiresAt).toISOString() : null,
+    tokenExpiresAt: tokenCache.accessExpiresAt ? new Date(tokenCache.accessExpiresAt).toISOString() : null,
+    lastAuthDebug: tokenCache.lastAuthDebug,
   };
 }
 
@@ -197,6 +254,13 @@ export async function getEpnSsidToken(): Promise<string> {
   }
 
   const url = `${oauthBaseUrl}/ssid?v=2&client_id=${encodeURIComponent(clientId)}`;
+  setLastAuthDebug({
+    ssid: {
+      method: 'GET',
+      url,
+    },
+    lastAuthError: undefined,
+  });
   const response = await fetch(url, { method: 'GET' });
   const bodyText = await response.text();
   let body: any = null;
@@ -207,16 +271,29 @@ export async function getEpnSsidToken(): Promise<string> {
     body = bodyText;
   }
 
+  setLastAuthDebug({
+    ssid: {
+      method: 'GET',
+      url,
+      status: response.status,
+      responseBody: body,
+    },
+  });
+  console.info('ePN SSID request', { url, status: response.status, responseBody: body });
+
   if (!response.ok) {
     if (response.status === 429 || isEpnCaptchaBody(body)) {
       setEpnCaptchaCooldown();
+      setLastAuthDebug({ lastAuthError: EPN_CAPTCHA_MESSAGE });
       throw new EpnApiError(EPN_CAPTCHA_MESSAGE, body, 429);
     }
+    setLastAuthDebug({ lastAuthError: formatEpnErrorMessage(body, response.status, response.statusText) });
     throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
   const token = body?.data?.attributes?.ssid_token || body?.ssid_token;
   if (!token) {
+    setLastAuthDebug({ lastAuthError: 'Unable to parse ssid_token from ePN response' });
     throw new EpnApiError('Unable to parse ssid_token from ePN response', body);
   }
 
@@ -238,19 +315,32 @@ export async function getEpnAccessToken(): Promise<string> {
 
   const ssidToken = await getEpnSsidToken();
   const url = `${oauthBaseUrl}/token?v=2`;
+  const grantType = 'client_credentials';
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    Authorization: getBasicAuthHeader(clientId, clientSecret),
+  };
+  const requestBody = {
+    ssid_token: ssidToken,
+    client_id: clientId,
+    grant_type: grantType,
+    check_ip: false,
+  };
+  setLastAuthDebug({
+    token: {
+      method: 'POST',
+      url,
+      grantType,
+      headers: { ...headers, Authorization: `Basic ${getMasked(clientId)}:${getMasked(clientSecret)}` },
+      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken) },
+    },
+    lastAuthError: undefined,
+  });
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      ssid_token: ssidToken,
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'client_credential',
-      check_ip: false,
-    }),
+    headers,
+    body: JSON.stringify(requestBody),
   });
 
   const bodyText = await response.text();
@@ -262,11 +352,33 @@ export async function getEpnAccessToken(): Promise<string> {
     body = bodyText;
   }
 
+  setLastAuthDebug({
+    token: {
+      method: 'POST',
+      url,
+      grantType,
+      headers: { ...headers, Authorization: `Basic ${getMasked(clientId)}:${getMasked(clientSecret)}` },
+      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken) },
+      status: response.status,
+      responseBody: body,
+    },
+  });
+  console.info('ePN token request', {
+    url,
+    status: response.status,
+    grantType,
+    headers: { ...headers, Authorization: 'Basic ***' },
+    requestBody: { ...requestBody, ssid_token: '***' },
+    responseBody: body,
+  });
+
   if (!response.ok) {
     if (response.status === 429 || isEpnCaptchaBody(body)) {
       setEpnCaptchaCooldown();
+      setLastAuthDebug({ lastAuthError: EPN_CAPTCHA_MESSAGE });
       throw new EpnApiError(EPN_CAPTCHA_MESSAGE, body, 429);
     }
+    setLastAuthDebug({ lastAuthError: formatEpnErrorMessage(body, response.status, response.statusText) });
     throw new EpnApiError(formatEpnErrorMessage(body, response.status, response.statusText), body, response.status);
   }
 
@@ -275,12 +387,17 @@ export async function getEpnAccessToken(): Promise<string> {
   const expiresIn = Number(body?.data?.attributes?.expires_in || body?.expires_in || 24 * 60 * 60);
 
   if (!accessToken) {
+    setLastAuthDebug({ lastAuthError: 'Unable to parse access_token from ePN response' });
     throw new EpnApiError('Unable to parse access_token from ePN response', body);
   }
 
   tokenCache.accessToken = accessToken;
   const cacheSeconds = Math.min(Math.max(expiresIn - 60, 20 * 60 * 60), 23 * 60 * 60);
   tokenCache.accessExpiresAt = Date.now() + cacheSeconds * 1000;
+  setLastAuthDebug({
+    tokenExpiresAt: new Date(tokenCache.accessExpiresAt).toISOString(),
+    lastAuthError: undefined,
+  });
 
   if (refreshToken) {
     tokenCache.refreshToken = refreshToken;

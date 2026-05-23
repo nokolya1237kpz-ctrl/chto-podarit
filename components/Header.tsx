@@ -1,6 +1,5 @@
 "use client";
 import Link from 'next/link';
-import Image from 'next/image';
 import React, { useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 
@@ -22,6 +21,7 @@ export default function Header() {
         <nav className="hidden items-center gap-4 sm:gap-6 sm:flex">
           <Link href="/quiz" className="text-sm font-medium text-slate-200/90 transition hover:text-white">Анкета</Link>
           <Link href="/compare" className="text-sm font-medium text-slate-200/90 transition hover:text-white">Сравнить цены</Link>
+          <Link href="/trends" className="text-sm font-medium text-slate-200/90 transition hover:text-white">Тренды</Link>
           <Link href="/results" className="text-sm font-medium text-slate-200/90 transition hover:text-white">Результаты</Link>
           <Link href="/vk" className="text-sm font-medium text-slate-200/90 transition hover:text-white">VK Mini App</Link>
           <Link href="/quiz" className="ml-2">
@@ -51,6 +51,7 @@ export default function Header() {
           <div className="flex flex-col gap-2">
             <Link href="/quiz" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Анкета</Link>
             <Link href="/compare" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Сравнить цены</Link>
+            <Link href="/trends" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Тренды</Link>
             <Link href="/results" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Результаты</Link>
             <Link href="/vk" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">VK Mini App</Link>
             <Link href="/quiz" onClick={closeMenu} className="rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-3 py-2.5 text-sm font-semibold text-white text-center shadow-[0_16px_50px_rgba(124,58,237,0.25)]">Начать подбор</Link>

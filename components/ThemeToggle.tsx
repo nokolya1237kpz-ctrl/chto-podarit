@@ -18,8 +18,8 @@ export default function ThemeToggle() {
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
-    <button onClick={toggle} aria-label="Toggle theme" className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-      {theme === 'dark' ? 'Light' : 'Dark'}
+    <button onClick={toggle} aria-label="Переключить тему" className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+      {theme === 'dark' ? 'Светлая' : 'Тёмная'}
     </button>
   );
 }

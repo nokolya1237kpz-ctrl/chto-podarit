@@ -4,8 +4,8 @@ import GiftCard from '@/components/GiftCard';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 
 export const metadata = {
-  title: 'Трендовые подарки и viral товары',
-  description: 'TikTok, WB hit, Ozon hit, viral и небанальные товары для подарков.',
+  title: 'Трендовые подарки и популярные товары',
+  description: 'Трендовые товары и идеи подарков, которые сейчас набирают популярность.',
 };
 
 export default async function TrendsPage() {
@@ -20,9 +20,9 @@ export default async function TrendsPage() {
       <Header />
       <main className="mx-auto max-w-7xl px-4 pb-20 pt-28">
         <section className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6">
-          <p className="text-sm uppercase tracking-[0.3em] text-pink-300">Trends</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-pink-300">Тренды</p>
           <h1 className="mt-3 text-4xl font-bold">Трендовые товары</h1>
-          <p className="mt-3 max-w-2xl text-slate-400">Viral, WB hit, Ozon hit и небанальные идеи, которые можно быстро добавить в подборку.</p>
+          <p className="mt-3 max-w-2xl text-slate-400">Трендовые товары и идеи подарков, которые сейчас набирают популярность.</p>
         </section>
         <section className="mt-8 grid gap-6 lg:grid-cols-3">
           {trends.map((product) => <GiftCard key={product.id} gift={product} />)}

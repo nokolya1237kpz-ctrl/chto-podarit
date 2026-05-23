@@ -20,25 +20,27 @@ export default function AdminShell({ title, children }: AdminShellProps) {
 
   const menu = [
     { href: '/admin/products', label: 'Товары' },
-    { href: '/admin/bulk-import', label: 'Bulk import' },
-    { href: '/admin/url-import', label: 'URL import' },
-    { href: '/admin/import-file', label: 'CSV/XLSX import' },
-    { href: '/admin/feeds', label: 'Feeds' },
-    { href: '/admin/price-sources', label: 'Price sources' },
     { href: '/admin/drafts', label: 'Черновики' },
-    { href: '/admin/sources', label: 'Источники товаров' },
-    { href: '/admin/sync', label: 'Синхронизация' },
+    { href: '/admin/url-import', label: 'Импорт по ссылкам' },
+    { href: '/admin/import-file', label: 'Импорт CSV/XLSX' },
+    { href: '/admin/feeds', label: 'Фиды' },
+    { href: '/admin/bulk-import', label: 'Массовый импорт' },
+    { href: '/admin/price-sources', label: 'Источники цен' },
     { href: '/admin/epn', label: 'ePN API' },
-    { href: '/admin/quick-add-epn', label: 'Быстро добавить ePN' },
     { href: '/admin/admitad', label: 'Admitad API' },
-    { href: '/admin/admitad-import', label: '🌐 Импорт из Admitad' },
+    { href: '/admin/ozon', label: 'Ozon Seller' },
+    { href: '/admin/sources', label: 'Источники' },
+    { href: '/admin/sync', label: 'Синхронизация' },
+    { href: '/admin/settings', label: 'Настройки' },
+    { href: '/admin/quick-add-epn', label: 'Быстро добавить ePN' },
+    { href: '/admin/admitad-import', label: 'Импорт из Admitad' },
   ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-3xl border border-white/10 bg-slate-900/80 p-5 backdrop-blur-xl shadow-2xl shadow-slate-950/20">
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="rounded-3xl border border-white/10 bg-slate-900/80 p-5 backdrop-blur-xl shadow-2xl shadow-slate-950/20 lg:sticky lg:top-6 lg:self-start">
             <div className="mb-8">
               <p className="text-sm uppercase tracking-[0.3em] text-white/50">Админка</p>
               <h2 className="mt-3 text-3xl font-bold">Панель управления</h2>
@@ -90,7 +92,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
             </div>
           </aside>
 
-          <main>
+          <main className="min-w-0">
             <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
