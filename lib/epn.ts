@@ -138,10 +138,6 @@ function getMasked(value?: string) {
   return `${value.slice(0, 3)}***${value.slice(-3)}`;
 }
 
-function getBasicAuthHeader(clientId: string, clientSecret: string) {
-  return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
-}
-
 function setLastAuthDebug(update: Partial<EpnAuthDebug>) {
   const config = getEpnConfig();
   tokenCache.lastAuthDebug = {
@@ -315,15 +311,15 @@ export async function getEpnAccessToken(): Promise<string> {
 
   const ssidToken = await getEpnSsidToken();
   const url = `${oauthBaseUrl}/token?v=2`;
-  const grantType = 'client_credentials';
+  const grantType = 'client_credential';
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    Authorization: getBasicAuthHeader(clientId, clientSecret),
   };
   const requestBody = {
     ssid_token: ssidToken,
     client_id: clientId,
+    client_secret: clientSecret,
     grant_type: grantType,
     check_ip: false,
   };
@@ -332,8 +328,8 @@ export async function getEpnAccessToken(): Promise<string> {
       method: 'POST',
       url,
       grantType,
-      headers: { ...headers, Authorization: `Basic ${getMasked(clientId)}:${getMasked(clientSecret)}` },
-      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken) },
+      headers,
+      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken), client_secret: getMasked(clientSecret) },
     },
     lastAuthError: undefined,
   });
@@ -357,8 +353,8 @@ export async function getEpnAccessToken(): Promise<string> {
       method: 'POST',
       url,
       grantType,
-      headers: { ...headers, Authorization: `Basic ${getMasked(clientId)}:${getMasked(clientSecret)}` },
-      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken) },
+      headers,
+      requestBody: { ...requestBody, ssid_token: getMasked(ssidToken), client_secret: getMasked(clientSecret) },
       status: response.status,
       responseBody: body,
     },
@@ -367,8 +363,8 @@ export async function getEpnAccessToken(): Promise<string> {
     url,
     status: response.status,
     grantType,
-    headers: { ...headers, Authorization: 'Basic ***' },
-    requestBody: { ...requestBody, ssid_token: '***' },
+    headers,
+    requestBody: { ...requestBody, ssid_token: '***', client_secret: '***' },
     responseBody: body,
   });
 
