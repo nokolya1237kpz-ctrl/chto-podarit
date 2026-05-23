@@ -24,6 +24,7 @@ export default function ImportFilePage() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<any[]>([]);
   const [report, setReport] = useState<any | null>(null);
+  const [debugText, setDebugText] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,26 +95,72 @@ export default function ImportFilePage() {
     return [];
   }
 
+  function parseJsonl(text: string) {
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0) return [];
+    return lines.map((line, index) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        throw new Error(`Файл не похож на JSON/JSONL. Ошибка в строке ${index + 1}.`);
+      }
+    });
+  }
+
+  function parseJsonOrJsonl(text: string) {
+    try {
+      const parsed = JSON.parse(text);
+      const items = findJsonItems(parsed);
+      if (items.length === 0) throw new Error('unsupported_json_shape: не найден массив products/items/offers/data');
+      return items;
+    } catch (jsonError) {
+      try {
+        const items = parseJsonl(text);
+        if (items.length === 0) throw new Error('empty_jsonl');
+        return items;
+      } catch {
+        throw new Error(
+          jsonError instanceof Error && jsonError.message.startsWith('unsupported_json_shape')
+            ? jsonError.message
+            : 'Файл не похож на JSON/JSONL. Проверьте формат.'
+        );
+      }
+    }
+  }
+
+  async function readJsonResponse(response: Response) {
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Сервер вернул не JSON (${response.status}). Ответ: ${text.slice(0, 200) || response.statusText}`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Сервер вернул повреждённый JSON (${response.status}). Ответ: ${text.slice(0, 200)}`);
+    }
+  }
+
   async function preview(nextFile = file) {
     if (!nextFile) return;
     setLoading(true);
     setError('');
     setReport(null);
+    setDebugText('');
     try {
       let parsedRows: any[] = [];
       if (nextFile.name.toLowerCase().endsWith('.xlsx')) {
         const form = new FormData();
         form.set('file', nextFile);
         const response = await fetch('/api/admin/import-file/preview', { method: 'POST', body: form });
-        const data = await response.json();
+        const data = await readJsonResponse(response);
         if (!response.ok || !data.success) throw new Error(data.error || 'Предпросмотр XLSX не выполнен');
         parsedRows = data.rows || data.sample || [];
       } else {
         const text = await nextFile.text();
+        setDebugText(text.slice(0, 200));
         if (nextFile.name.toLowerCase().endsWith('.json') || nextFile.type.includes('json')) {
-          const parsed = JSON.parse(text);
-          parsedRows = findJsonItems(parsed);
-          if (parsedRows.length === 0) throw new Error('unsupported_json_shape: не найден массив products/items/offers/data');
+          parsedRows = parseJsonOrJsonl(text);
         } else {
           parsedRows = parseCsv(text);
         }
@@ -149,7 +196,7 @@ export default function ImportFilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: rows, columnMapping: mapping }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || !data.success) throw new Error(data.error || 'Импорт не выполнен');
       setReport(data);
       setMessage(`Строк: ${data.total || 0}, импортировано активных ${data.importedActive || 0}, черновиков ${data.importedDraft || 0}, пропущено ${data.skipped || 0}, ошибок ${data.errors || 0}`);
@@ -165,6 +212,12 @@ export default function ImportFilePage() {
       <div className="space-y-6">
         {message ? <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
+        {debugText && error ? (
+          <details className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-200">
+            <summary className="cursor-pointer select-none font-semibold">Показать первые 200 символов файла</summary>
+            <pre className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-slate-900 p-3 text-xs text-slate-300">{debugText}</pre>
+          </details>
+        ) : null}
         <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
           <h2 className="text-xl font-semibold">Импорт CSV / XLSX / JSON</h2>
           <p className="mt-2 text-sm text-slate-400">После предпросмотра можно сопоставить колонки и загрузить товары в каталог.</p>
