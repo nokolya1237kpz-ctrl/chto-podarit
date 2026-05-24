@@ -94,12 +94,13 @@ export function applyColumnMapping(row: Record<string, any>, mapping: ColumnMapp
   Object.entries(mapping).forEach(([target, source]) => {
     if (source && row[source] !== undefined) mapped[target] = row[source];
   });
+  const imageValue = mapped.imageUrl ?? row.imageUrl ?? row.coverImageUrl ?? row.image_url ?? row.image ?? row.picture ?? row.images;
   return {
     title: mapped.title ?? row.title ?? row.name,
-    description: mapped.description ?? row.description ?? row.desc,
-    price: mapped.price ?? row.price,
-    oldPrice: mapped.oldPrice ?? row.oldPrice ?? row.old_price,
-    imageUrl: mapped.imageUrl ?? row.imageUrl ?? row.image_url ?? row.image,
+    description: mapped.description ?? row.description ?? row.richDescription ?? row.desc,
+    price: mapped.price ?? row.cardPrice ?? row.price ?? row.priceDecimal,
+    oldPrice: mapped.oldPrice ?? row.originalPrice ?? row.oldPrice ?? row.old_price,
+    imageUrl: Array.isArray(imageValue) ? imageValue[0] : imageValue,
     productUrl: mapped.productUrl ?? row.productUrl ?? row.product_url ?? row.url ?? row.link,
     affiliateUrl: mapped.affiliateUrl ?? row.affiliateUrl ?? row.affiliate_url,
     marketplace: mapped.marketplace ?? row.marketplace,

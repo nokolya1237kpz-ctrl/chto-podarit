@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { applyColumnMapping, normalizeMappedRow, parseImportFile } from '@/lib/fileImport';
 import { importNormalizedProduct } from '@/lib/importProduct';
+import { detectDatasetType, normalizeOzonDatasetItem } from '@/lib/scraperDataset';
 
 export async function POST(request: NextRequest) {
   const isAdmin = await verifyAdminSession();
@@ -39,16 +40,23 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
     let errors = 0;
     const reports: any[] = [];
+    const datasetType = detectDatasetType(rows);
+    const firstNormalizedItem = datasetType === 'ozon_scraper'
+      ? normalizeOzonDatasetItem({ ...rows[0], ...applyColumnMapping(rows[0] || {}, mapping) })
+      : normalizeMappedRow(applyColumnMapping(rows[0] || {}, mapping), 'feed');
 
     for (const row of rows.slice(0, 3000)) {
       try {
         const mapped = applyColumnMapping(row, mapping);
-        if (!mapped.title && !row.title && !row.name) {
+        const normalizedInput = datasetType === 'ozon_scraper'
+          ? normalizeOzonDatasetItem({ ...row, ...mapped })
+          : normalizeMappedRow(mapped, 'feed');
+        if (!normalizedInput.title) {
           skipped += 1;
           if (reports.length < 100) reports.push({ row, status: 'skipped', reason: 'missing_title' });
           continue;
         }
-        const saved = await importNormalizedProduct(normalizeMappedRow(mapped, 'feed'));
+        const saved = await importNormalizedProduct(normalizedInput);
         if (saved) imported += 1;
         if (saved?.status === 'active') importedActive += 1;
         if (saved?.status === 'draft') importedDraft += 1;
@@ -77,11 +85,33 @@ export async function POST(request: NextRequest) {
         errors,
         total: rows.length,
         detectedRows: rows.length,
+        debug: {
+          detectedDatasetType: datasetType,
+          arrayLength: rows.length,
+          firstNormalizedItem,
+          importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
+        },
         reports,
       }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, imported, importedActive, importedDraft, skipped, errors, total: rows.length, detectedRows: rows.length, reports });
+    return NextResponse.json({
+      success: true,
+      imported,
+      importedActive,
+      importedDraft,
+      skipped,
+      errors,
+      total: rows.length,
+      detectedRows: rows.length,
+      debug: {
+        detectedDatasetType: datasetType,
+        arrayLength: rows.length,
+        firstNormalizedItem,
+        importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
+      },
+      reports,
+    });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка импорта файла' }, { status: 500 });
   }

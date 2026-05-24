@@ -25,6 +25,7 @@ export default function ImportFilePage() {
   const [rows, setRows] = useState<any[]>([]);
   const [report, setReport] = useState<any | null>(null);
   const [debugText, setDebugText] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,10 +36,10 @@ export default function ImportFilePage() {
       const lowerField = field.toLowerCase();
       const aliases: Record<string, string[]> = {
         title: ['title', 'name', 'product_name', 'model', 'название', 'товар'],
-        description: ['description', 'desc', 'описание'],
-        price: ['price', 'sale_price', 'current_price', 'pricerub', 'цена'],
-        oldPrice: ['oldprice', 'old_price', 'original_price', 'старая цена'],
-        imageUrl: ['imageurl', 'image_url', 'image', 'picture', 'картинка', 'фото'],
+        description: ['description', 'richdescription', 'desc', 'описание'],
+        price: ['cardprice', 'price', 'pricedecimal', 'sale_price', 'current_price', 'pricerub', 'цена'],
+        oldPrice: ['originalprice', 'oldprice', 'old_price', 'original_price', 'старая цена'],
+        imageUrl: ['coverimageurl', 'imageurl', 'image_url', 'image', 'images', 'picture', 'картинка', 'фото'],
         productUrl: ['producturl', 'product_url', 'url', 'link', 'ссылка'],
         affiliateUrl: ['affiliateurl', 'affiliate_url', 'deeplink', 'партнерская ссылка'],
         marketplace: ['marketplace', 'shop', 'store', 'маркетплейс'],
@@ -52,6 +53,37 @@ export default function ImportFilePage() {
       if (match) auto[field] = match;
     });
     return auto;
+  }
+
+  function detectDatasetType(items: any[]) {
+    const first = items[0] || {};
+    if ('sku' in first && ('cardPrice' in first || 'coverImageUrl' in first || 'priceDecimal' in first)) return 'ozon_scraper';
+    if ('sku' in first && String(first.url || '').includes('ozon')) return 'ozon_scraper';
+    return 'generic';
+  }
+
+  function normalizePrice(value: any) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    return Number(String(value || '').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+  }
+
+  function firstImage(value: any) {
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (raw && typeof raw === 'object') return raw.url || raw.src || raw.imageUrl || '';
+    return raw || '';
+  }
+
+  function normalizePreviewItem(row: any) {
+    return {
+      title: String(row.title || row.name || '').trim(),
+      description: String(row.description || row.richDescription || '').trim(),
+      price: normalizePrice(row.cardPrice ?? row.price ?? row.priceDecimal),
+      oldPrice: normalizePrice(row.originalPrice ?? row.oldPrice),
+      imageUrl: String(firstImage(row.coverImageUrl ?? row.image ?? row.images ?? row.imageUrl) || '').trim(),
+      productUrl: String(row.url || row.productUrl || '').trim(),
+      marketplace: String(row.marketplace || row.url || '').includes('ozon') ? 'ozon' : row.marketplace || 'other',
+      sku: row.sku || row.id || '',
+    };
   }
 
   function parseCsv(text: string) {
@@ -147,6 +179,7 @@ export default function ImportFilePage() {
     setError('');
     setReport(null);
     setDebugText('');
+    setDebugInfo(null);
     try {
       let parsedRows: any[] = [];
       if (nextFile.name.toLowerCase().endsWith('.xlsx')) {
@@ -171,6 +204,12 @@ export default function ImportFilePage() {
       setColumns(nextColumns);
       setSample(parsedRows.slice(0, 20));
       setMapping(detectMapping(nextColumns));
+      setDebugInfo({
+        detectedDatasetType: detectDatasetType(parsedRows),
+        arrayLength: parsedRows.length,
+        firstNormalizedItem: normalizePreviewItem(parsedRows[0] || {}),
+        importPayloadSize: JSON.stringify({ items: parsedRows, columnMapping: detectMapping(nextColumns) }).length,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка предпросмотра');
       setRows([]);
@@ -199,6 +238,7 @@ export default function ImportFilePage() {
       const data = await readJsonResponse(response);
       if (!response.ok || !data.success) throw new Error(data.error || 'Импорт не выполнен');
       setReport(data);
+      setDebugInfo(data.debug || debugInfo);
       setMessage(`Строк: ${data.total || 0}, импортировано активных ${data.importedActive || 0}, черновиков ${data.importedDraft || 0}, пропущено ${data.skipped || 0}, ошибок ${data.errors || 0}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
@@ -212,10 +252,15 @@ export default function ImportFilePage() {
       <div className="space-y-6">
         {message ? <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
         {error ? <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
-        {debugText && error ? (
+        {(debugInfo || (debugText && error)) ? (
           <details className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-200">
-            <summary className="cursor-pointer select-none font-semibold">Показать первые 200 символов файла</summary>
-            <pre className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-slate-900 p-3 text-xs text-slate-300">{debugText}</pre>
+            <summary className="cursor-pointer select-none font-semibold">Показать debug импорта</summary>
+            {debugInfo ? (
+              <pre className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-slate-900 p-3 text-xs text-slate-300">{JSON.stringify(debugInfo, null, 2)}</pre>
+            ) : null}
+            {debugText && error ? (
+              <pre className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-slate-900 p-3 text-xs text-slate-300">{debugText}</pre>
+            ) : null}
           </details>
         ) : null}
         <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">
