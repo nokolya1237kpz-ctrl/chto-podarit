@@ -37,12 +37,12 @@ export default function AdminShell({ title, children }: AdminShellProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_28%),linear-gradient(180deg,#03040b,#080b18)] text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-3xl border border-white/10 bg-slate-900/80 p-5 backdrop-blur-xl shadow-2xl shadow-slate-950/20 lg:sticky lg:top-6 lg:self-start">
+          <aside className="premium-surface overflow-hidden rounded-3xl p-5 lg:sticky lg:top-6 lg:self-start">
             <div className="mb-8">
-              <p className="text-sm uppercase tracking-[0.3em] text-white/50">Админка</p>
+              <p className="premium-kicker">Админка</p>
               <h2 className="mt-3 text-3xl font-bold">Панель управления</h2>
               <p className="mt-3 text-sm text-white/60">Тёмный премиум интерфейс для управления товарами и провайдерами.</p>
             </div>
@@ -56,8 +56,8 @@ export default function AdminShell({ title, children }: AdminShellProps) {
                     href={item.href}
                     className={`block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                       active
-                        ? 'bg-purple-500/15 text-purple-200 border border-purple-500/20'
-                        : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        ? 'border border-purple-400/28 bg-gradient-to-r from-purple-500/18 to-pink-500/12 text-purple-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                        : 'text-white/70 hover:bg-white/7 hover:text-white'
                     }`}
                   >
                     {item.label}
@@ -68,7 +68,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
 
             <div className="mt-8 border-t border-white/10 pt-5">
               <div className="space-y-4">
-                <div className="rounded-2xl bg-slate-950/70 p-4 border border-white/10">
+                <div className="rounded-2xl bg-slate-950/60 p-4 border border-white/10">
                   <p className="text-xs uppercase tracking-[0.3em] text-white/50">Провайдеры</p>
                   <div className="mt-4 grid gap-3">
                     {ADMIN_PROVIDERS.slice(0, 5).map((provider) => (
@@ -84,7 +84,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full rounded-2xl bg-purple-500/15 px-4 py-3 text-sm font-semibold text-purple-100 hover:bg-purple-500/20 transition"
+                  className="w-full rounded-2xl border border-purple-300/16 bg-purple-500/15 px-4 py-3 text-sm font-semibold text-purple-100 hover:bg-purple-500/22 transition"
                 >
                   Выйти из админки
                 </button>
@@ -93,10 +93,10 @@ export default function AdminShell({ title, children }: AdminShellProps) {
           </aside>
 
           <main className="min-w-0">
-            <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+            <div className="premium-surface mb-6 flex flex-col gap-4 rounded-3xl p-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.3em] text-white/50">Админ</p>
+                  <p className="premium-kicker">Админ</p>
                   <h1 className="text-4xl font-bold text-white">{title}</h1>
                 </div>
               </div>
