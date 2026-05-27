@@ -328,6 +328,10 @@ export default function ImportFilePage() {
         saveErrors: 0,
         createdActive: 0,
         createdDraft: 0,
+        updatedExisting: 0,
+        skippedSoftDeleted: 0,
+        skippedAlreadyInBatch: 0,
+        skippedDuplicate: 0,
         duplicates: 0,
         reports: [] as any[],
       };
@@ -385,7 +389,7 @@ export default function ImportFilePage() {
         skipped: aggregate.skippedNoTitle,
         errors: aggregate.saveErrors,
       });
-      setMessage(cancelRef.current ? 'Импорт остановлен' : `Импорт завершён. Активных: ${aggregate.createdActive}, черновиков: ${aggregate.createdDraft}, дублей: ${aggregate.duplicates}.`);
+      setMessage(cancelRef.current ? 'Импорт остановлен' : `Импорт завершён. Активных: ${aggregate.createdActive}, черновиков: ${aggregate.createdDraft}, обновлено: ${aggregate.updatedExisting}, пропущено дублей: ${aggregate.skippedDuplicate}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
     } finally {
@@ -496,6 +500,10 @@ function mergeImportReports(current: any, next: any) {
     saveErrors: current.saveErrors + (next.saveErrors || 0),
     createdActive: current.createdActive + (next.createdActive || 0),
     createdDraft: current.createdDraft + (next.createdDraft || 0),
+    updatedExisting: current.updatedExisting + (next.updatedExisting || 0),
+    skippedSoftDeleted: current.skippedSoftDeleted + (next.skippedSoftDeleted || 0),
+    skippedAlreadyInBatch: current.skippedAlreadyInBatch + (next.skippedAlreadyInBatch || 0),
+    skippedDuplicate: current.skippedDuplicate + (next.skippedDuplicate || 0),
     duplicates: current.duplicates + (next.duplicates || 0),
     reports: [...current.reports, ...(next.reports || [])].slice(0, 100),
   };

@@ -9,7 +9,10 @@ export function ImportReport({ report }: { report: any | null }) {
         <Stat label="Нормализовано" value={report.normalizedRows || report.detectedRows} />
         <Stat label="Активных" value={report.createdActive ?? report.importedActive} />
         <Stat label="Черновиков" value={report.createdDraft ?? report.importedDraft} />
-        <Stat label="Дубли" value={report.duplicates} />
+        <Stat label="Обновлено" value={report.updatedExisting} />
+        <Stat label="Удалённые пропущены" value={report.skippedSoftDeleted} />
+        <Stat label="Дубли в batch" value={report.skippedAlreadyInBatch} />
+        <Stat label="Дубли в базе" value={report.skippedDuplicate ?? report.duplicates} />
         <Stat label="Без названия" value={report.skippedNoTitle} />
         <Stat label="Без картинки" value={report.skippedNoImage} />
         <Stat label="Без цены" value={report.skippedNoPrice} />

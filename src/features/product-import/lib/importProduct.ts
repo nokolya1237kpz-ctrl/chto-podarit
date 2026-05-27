@@ -1,7 +1,7 @@
 import type { Product } from '@entities/product/types';
 import { applyAutoFillToProduct } from '@entities/product/lib/productAutoFill';
 import { cleanupTitle, getDedupeKey, isPublishableProduct, normalizeMarketplace, normalizeProductUrl } from '@entities/product/lib/productNormalize';
-import { upsertProductByExternalId, supabaseAdmin } from '@lib/supabase';
+import { upsertProductWithDedupe, supabaseAdmin, type ProductUpsertDedupeResult } from '@lib/supabase';
 import { browserParser } from '@server/parsers/browserParser';
 
 export type ImportProductInput = Partial<Product> & {
@@ -32,10 +32,22 @@ async function enrichProduct(input: ImportProductInput) {
 }
 
 export async function importNormalizedProduct(input: ImportProductInput): Promise<Product | null> {
+  const result = await importNormalizedProductWithDedupe(input);
+  return result.product;
+}
+
+export async function importNormalizedProductWithDedupe(input: ImportProductInput): Promise<ProductUpsertDedupeResult> {
   const enrichment = await enrichProduct(input);
   input = enrichment.input;
   const cleanedTitle = cleanupTitle(input.title);
-  if (!cleanedTitle) return null;
+  if (!cleanedTitle) {
+    return {
+      product: null,
+      action: 'skipped',
+      reason: 'not_saved',
+      duplicateMatch: null,
+    };
+  }
 
   const normalized = applyAutoFillToProduct({
     ...input,
@@ -77,9 +89,9 @@ export async function importNormalizedProduct(input: ImportProductInput): Promis
     importStatus: publishable ? 'active_ready' : 'draft_incomplete',
   } as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 
-  const saved = await upsertProductByExternalId(product);
-  await recordPriceHistory(saved || product);
-  return saved;
+  const result = await upsertProductWithDedupe(product);
+  await recordPriceHistory(result.product || product);
+  return result;
 }
 
 async function recordPriceHistory(product: Partial<Product>) {

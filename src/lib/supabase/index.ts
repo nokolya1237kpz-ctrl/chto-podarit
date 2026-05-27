@@ -294,32 +294,100 @@ export async function upsertProductByExternalId(
   product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>,
   supabase = supabaseAdmin
 ): Promise<Product | null> {
-  if (!supabase) return null;
+  const result = await upsertProductWithDedupe(product, supabase);
+  return result.product;
+}
+
+export type ProductDedupeReason =
+  | 'created_new'
+  | 'updated_existing'
+  | 'soft_deleted'
+  | 'same_external_id'
+  | 'same_product_url'
+  | 'same_title_price_image'
+  | 'not_saved'
+  | 'supabase_not_configured';
+
+export type ProductUpsertDedupeResult = {
+  product: Product | null;
+  action: 'created' | 'updated' | 'skipped';
+  reason: ProductDedupeReason;
+  matchedBy?: 'source_external_id' | 'marketplace_external_id' | 'product_url' | 'title_price_image';
+  duplicateMatch?: {
+    matchedBy?: string;
+    existingId?: string;
+    existingTitle?: string;
+    existingExternalProductId?: string | null;
+    existingDeletedAt?: string | null;
+  } | null;
+};
+
+export async function upsertProductWithDedupe(
+  product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>,
+  supabase = supabaseAdmin
+): Promise<ProductUpsertDedupeResult> {
+  if (!supabase) {
+    return {
+      product: null,
+      action: 'skipped',
+      reason: 'supabase_not_configured',
+      duplicateMatch: null,
+    };
+  }
 
   try {
     const normalizedUrl = product.originalUrl || product.affiliateUrl || '';
     let existing: any = null;
     let existingError: any = null;
+    let matchedBy: ProductUpsertDedupeResult['matchedBy'] | undefined;
+    const selectFields = 'id, title, external_product_id, deleted_at, deleted_reason';
 
     if (product.externalProductId && product.sourceProvider) {
       const result = await supabase
         .from('products')
-        .select('id, deleted_at, deleted_reason')
+        .select(selectFields)
         .eq('external_product_id', product.externalProductId)
         .eq('source_provider', product.sourceProvider)
         .maybeSingle();
       existing = result.data;
       existingError = result.error;
+      if (existing) matchedBy = 'source_external_id';
+    }
+
+    if (!existing && product.externalProductId && product.marketplace) {
+      const result = await supabase
+        .from('products')
+        .select(selectFields)
+        .eq('external_product_id', product.externalProductId)
+        .eq('marketplace', product.marketplace)
+        .maybeSingle();
+      existing = result.data;
+      existingError = result.error || existingError;
+      if (existing) matchedBy = 'marketplace_external_id';
     }
 
     if (!existing && normalizedUrl) {
       const byUrl = await supabase
         .from('products')
-        .select('id, deleted_at, deleted_reason')
+        .select(selectFields)
         .or(`original_url.eq.${normalizedUrl},affiliate_url.eq.${normalizedUrl}`)
         .maybeSingle();
       existing = byUrl.data;
       existingError = byUrl.error || existingError;
+      if (existing) matchedBy = 'product_url';
+    }
+
+    if (!existing && product.title && product.price && product.imageUrl) {
+      const byTitlePriceImage = await supabase
+        .from('products')
+        .select(selectFields)
+        .eq('title', product.title)
+        .eq('price', product.price)
+        .eq('image_url', product.imageUrl)
+        .maybeSingle();
+      existing = byTitlePriceImage.data;
+      existingError = byTitlePriceImage.error || existingError;
+      if (existing) matchedBy = 'title_price_image';
     }
 
     if (isMissingDeletedAtColumn(existingError)) {
@@ -331,20 +399,58 @@ export async function upsertProductByExternalId(
         .maybeSingle();
       existing = fallback.data as any;
       existingError = fallback.error;
+      if (existing) matchedBy = 'source_external_id';
     }
 
     if (existing?.id) {
+      const reasonByMatch: Record<string, ProductDedupeReason> = {
+        source_external_id: 'same_external_id',
+        marketplace_external_id: 'same_external_id',
+        product_url: 'same_product_url',
+        title_price_image: 'same_title_price_image',
+      };
+      const duplicateMatch = {
+        matchedBy,
+        existingId: existing.id,
+        existingTitle: existing.title,
+        existingExternalProductId: existing.external_product_id,
+        existingDeletedAt: existing.deleted_at,
+      };
       if ((existing as any).deleted_at) {
         console.warn('Import skipped because matching product is soft-deleted:', product.externalProductId);
-        return null;
+        return {
+          product: null,
+          action: 'skipped',
+          reason: 'soft_deleted',
+          matchedBy,
+          duplicateMatch,
+        };
       }
-      return updateProduct(existing.id, product, supabase);
+      const updated = await updateProduct(existing.id, product, supabase);
+      return {
+        product: updated,
+        action: updated ? 'updated' : 'skipped',
+        reason: updated ? 'updated_existing' : (matchedBy ? reasonByMatch[matchedBy] : 'not_saved'),
+        matchedBy,
+        duplicateMatch,
+      };
     }
 
-    return createProduct(product, supabase);
+    const created = await createProduct(product, supabase);
+    return {
+      product: created,
+      action: created ? 'created' : 'skipped',
+      reason: created ? 'created_new' : 'not_saved',
+      duplicateMatch: null,
+    };
   } catch (error) {
     console.error('Error upserting product:', error);
-    return null;
+    return {
+      product: null,
+      action: 'skipped',
+      reason: 'not_saved',
+      duplicateMatch: null,
+    };
   }
 }
 

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       processedRows,
       createdActive: job.createdActive + report.createdActive,
       createdDraft: job.createdDraft + report.createdDraft,
-      duplicates: job.duplicates + report.duplicates,
+      duplicates: job.duplicates + report.skippedDuplicate + report.skippedAlreadyInBatch,
       errorsCount: job.errorsCount + report.saveErrors + report.skippedNoTitle,
       finishedAt: status === 'completed' ? new Date().toISOString() : null,
     });

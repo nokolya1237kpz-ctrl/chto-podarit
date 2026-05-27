@@ -2,7 +2,7 @@ import 'server-only';
 
 import { supabaseAdmin } from '@lib/supabase';
 import { applyColumnMapping, normalizeMappedRow } from './fileImport';
-import { importNormalizedProduct } from './importProduct';
+import { importNormalizedProductWithDedupe } from './importProduct';
 import { detectDatasetType, normalizeOzonDatasetItem } from '@/lib/scraperDataset';
 
 export type ImportBatchReport = {
@@ -21,6 +21,10 @@ export type ImportBatchReport = {
   saveErrors: number;
   createdActive: number;
   createdDraft: number;
+  updatedExisting: number;
+  skippedSoftDeleted: number;
+  skippedAlreadyInBatch: number;
+  skippedDuplicate: number;
   duplicates: number;
   reports: any[];
   debug: {
@@ -32,6 +36,7 @@ export type ImportBatchReport = {
     columnMapping: Record<string, string>;
     firstNormalizedItem: any;
     firstSaveError: string | null;
+    firstDuplicateMatch: any;
     importPayloadSize: number;
   };
 };
@@ -79,6 +84,12 @@ function normalizeRow(row: Record<string, any>, mapping: Record<string, string>,
 
   normalizedInput.sourceProvider = 'file_import' as any;
   normalizedInput.sourceType = 'feed' as any;
+  if (datasetType === 'sadovod_qparser' || normalizedInput.marketplace === 'sadovod') {
+    normalizedInput.marketplace = 'sadovod';
+    if (normalizedInput.externalProductId && !String(normalizedInput.externalProductId).startsWith('sadovod:')) {
+      normalizedInput.externalProductId = `sadovod:${normalizedInput.externalProductId}`;
+    }
+  }
   normalizedInput.category = normalizedInput.category || detectBroadCategory(normalizedInput as any);
   normalizedInput.tags = Array.from(new Set([...(normalizedInput.tags || []), normalizedInput.category].filter(Boolean)));
   (normalizedInput as any).imageStatus = normalizedInput.imageUrl ? 'remote' : 'missing';
@@ -146,8 +157,14 @@ export async function processImportBatch({
   let saveErrors = 0;
   let createdActive = 0;
   let createdDraft = 0;
+  let updatedExisting = 0;
+  let skippedSoftDeleted = 0;
+  let skippedAlreadyInBatch = 0;
+  let skippedDuplicate = 0;
   let duplicates = 0;
   let firstSaveError: string | null = null;
+  let firstDuplicateMatch: any = null;
+  const batchKeys = new Set<string>();
 
   await runPool(rows.slice(0, 3000), async (row) => {
     try {
@@ -167,23 +184,51 @@ export async function processImportBatch({
         return;
       }
 
-      const saved = await importNormalizedProduct(normalizedInput as any);
-      if (saved) {
-        imported += 1;
-        if (saved.status === 'active') {
-          importedActive += 1;
-          createdActive += 1;
-        }
-        if (saved.status === 'draft') {
-          importedDraft += 1;
-          createdDraft += 1;
-        }
-        await savePriceSnapshot(saved);
-        if (reports.length < maxReports) reports.push({ title: saved.title, status: saved.status, reason: saved.importStatus });
-      } else {
+      const batchKey = [
+        normalizedInput.sourceProvider,
+        normalizedInput.externalProductId,
+        normalizedInput.originalUrl || normalizedInput.affiliateUrl,
+        normalizedInput.title,
+        normalizedInput.price,
+        normalizedInput.imageUrl,
+      ].filter(Boolean).join('|').toLowerCase();
+      if (batchKeys.has(batchKey)) {
         skipped += 1;
         duplicates += 1;
-        if (reports.length < maxReports) reports.push({ row, status: 'skipped', reason: 'duplicate_or_deleted' });
+        skippedAlreadyInBatch += 1;
+        if (reports.length < maxReports) reports.push({ title: normalizedInput.title, status: 'skipped', reason: 'already_in_batch' });
+        return;
+      }
+      batchKeys.add(batchKey);
+
+      const upsert = await importNormalizedProductWithDedupe(normalizedInput as any);
+      const saved = upsert.product;
+      if (saved) {
+        imported += 1;
+        if (upsert.action === 'updated') {
+          updatedExisting += 1;
+        } else {
+          if (saved.status === 'active') {
+            importedActive += 1;
+            createdActive += 1;
+          }
+          if (saved.status === 'draft') {
+            importedDraft += 1;
+            createdDraft += 1;
+          }
+        }
+        await savePriceSnapshot(saved);
+        if (reports.length < maxReports) reports.push({ title: saved.title, status: saved.status, reason: upsert.reason, matchedBy: upsert.matchedBy });
+      } else {
+        skipped += 1;
+        if (upsert.reason === 'soft_deleted') {
+          skippedSoftDeleted += 1;
+        } else {
+          duplicates += 1;
+          skippedDuplicate += 1;
+        }
+        firstDuplicateMatch ||= upsert.duplicateMatch;
+        if (reports.length < maxReports) reports.push({ row, status: 'skipped', reason: upsert.reason, matchedBy: upsert.matchedBy, duplicateMatch: upsert.duplicateMatch });
       }
     } catch (error) {
       errors += 1;
@@ -211,6 +256,10 @@ export async function processImportBatch({
     saveErrors,
     createdActive,
     createdDraft,
+    updatedExisting,
+    skippedSoftDeleted,
+    skippedAlreadyInBatch,
+    skippedDuplicate,
     duplicates,
     reports,
     debug: {
@@ -222,6 +271,7 @@ export async function processImportBatch({
       columnMapping: mapping,
       firstNormalizedItem,
       firstSaveError,
+      firstDuplicateMatch,
       importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
     },
   };

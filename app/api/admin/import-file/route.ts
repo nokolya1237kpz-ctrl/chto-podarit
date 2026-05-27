@@ -71,7 +71,12 @@ export async function POST(request: NextRequest) {
 
 function humanizeImportReason(reason: string) {
   if (reason === 'missing_title') return 'В строках не найдено название товара';
-  if (reason === 'duplicate_or_deleted') return 'Товары уже существуют или были удалены ранее';
+  if (reason === 'soft_deleted') return 'Товар был удалён ранее и не восстановлен автоматически';
+  if (reason === 'updated_existing') return 'Товар уже был в базе и обновлён';
+  if (reason === 'already_in_batch') return 'Дубликат внутри текущего файла';
+  if (reason === 'same_external_id') return 'Товар найден по внешнему ID';
+  if (reason === 'same_product_url') return 'Товар найден по URL';
+  if (reason === 'same_title_price_image') return 'Товар найден по названию, цене и картинке';
   if (reason === 'no_items_imported') return 'Не удалось импортировать товары';
   return reason;
 }
