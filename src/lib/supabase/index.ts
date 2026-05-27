@@ -318,7 +318,10 @@ export type ProductUpsertDedupeResult = {
     existingId?: string;
     existingTitle?: string;
     existingExternalProductId?: string | null;
+    existingProductUrl?: string | null;
     existingDeletedAt?: string | null;
+    existingStatus?: string | null;
+    existingSourceProvider?: string | null;
   } | null;
 };
 
@@ -340,7 +343,7 @@ export async function upsertProductWithDedupe(
     let existing: any = null;
     let existingError: any = null;
     let matchedBy: ProductUpsertDedupeResult['matchedBy'] | undefined;
-    const selectFields = 'id, title, external_product_id, deleted_at, deleted_reason';
+    const selectFields = 'id, title, external_product_id, original_url, affiliate_url, deleted_at, deleted_reason, status, source_provider';
 
     if (product.externalProductId && product.sourceProvider) {
       const result = await supabase
@@ -414,7 +417,10 @@ export async function upsertProductWithDedupe(
         existingId: existing.id,
         existingTitle: existing.title,
         existingExternalProductId: existing.external_product_id,
+        existingProductUrl: existing.original_url || existing.affiliate_url,
         existingDeletedAt: existing.deleted_at,
+        existingStatus: existing.status,
+        existingSourceProvider: existing.source_provider,
       };
       if ((existing as any).deleted_at) {
         console.warn('Import skipped because matching product is soft-deleted:', product.externalProductId);
@@ -430,7 +436,7 @@ export async function upsertProductWithDedupe(
       return {
         product: updated,
         action: updated ? 'updated' : 'skipped',
-        reason: updated ? 'updated_existing' : (matchedBy ? reasonByMatch[matchedBy] : 'not_saved'),
+        reason: updated ? 'updated_existing' : 'not_saved',
         matchedBy,
         duplicateMatch,
       };

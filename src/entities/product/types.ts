@@ -27,6 +27,8 @@ export type SourceProvider =
   | 'megamarket'
   | 'mvideo'
   | 'eldorado'
+  | 'sadovod'
+  | 'file_import'
   | 'search_api'
   | 'feed'
   | 'direct_api';

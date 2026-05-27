@@ -86,6 +86,8 @@ function normalizeRow(row: Record<string, any>, mapping: Record<string, string>,
   normalizedInput.sourceType = 'feed' as any;
   if (datasetType === 'sadovod_qparser' || normalizedInput.marketplace === 'sadovod') {
     normalizedInput.marketplace = 'sadovod';
+    normalizedInput.sourceProvider = 'sadovod' as any;
+    normalizedInput.sourceType = 'feed' as any;
     if (normalizedInput.externalProductId && !String(normalizedInput.externalProductId).startsWith('sadovod:')) {
       normalizedInput.externalProductId = `sadovod:${normalizedInput.externalProductId}`;
     }
@@ -196,7 +198,14 @@ export async function processImportBatch({
         skipped += 1;
         duplicates += 1;
         skippedAlreadyInBatch += 1;
-        if (reports.length < maxReports) reports.push({ title: normalizedInput.title, status: 'skipped', reason: 'already_in_batch' });
+        if (reports.length < maxReports) {
+          reports.push({
+            title: normalizedInput.title,
+            status: 'skipped',
+            reason: 'already_in_batch',
+            dedupeDebug: buildInputDedupeDebug(normalizedInput),
+          });
+        }
         return;
       }
       batchKeys.add(batchKey);
@@ -223,12 +232,27 @@ export async function processImportBatch({
         skipped += 1;
         if (upsert.reason === 'soft_deleted') {
           skippedSoftDeleted += 1;
+        } else if (upsert.reason === 'not_saved' || upsert.reason === 'supabase_not_configured') {
+          saveErrors += 1;
+          errors += 1;
+          firstSaveError ||= upsert.reason;
         } else {
           duplicates += 1;
           skippedDuplicate += 1;
         }
-        firstDuplicateMatch ||= upsert.duplicateMatch;
-        if (reports.length < maxReports) reports.push({ row, status: 'skipped', reason: upsert.reason, matchedBy: upsert.matchedBy, duplicateMatch: upsert.duplicateMatch });
+        const duplicateDebug = {
+          ...buildInputDedupeDebug(normalizedInput),
+          matchedBy: upsert.matchedBy,
+          existingProductId: upsert.duplicateMatch?.existingId,
+          existingExternalProductId: upsert.duplicateMatch?.existingExternalProductId,
+          existingProductUrl: upsert.duplicateMatch?.existingProductUrl,
+          existingDeletedAt: upsert.duplicateMatch?.existingDeletedAt,
+          existingStatus: upsert.duplicateMatch?.existingStatus,
+          existingSourceProvider: upsert.duplicateMatch?.existingSourceProvider,
+          existingTitle: upsert.duplicateMatch?.existingTitle,
+        };
+        firstDuplicateMatch ||= duplicateDebug;
+        if (reports.length < maxReports) reports.push({ row, status: 'skipped', reason: upsert.reason, matchedBy: upsert.matchedBy, duplicateMatch: upsert.duplicateMatch, dedupeDebug: duplicateDebug });
       }
     } catch (error) {
       errors += 1;
@@ -274,5 +298,16 @@ export async function processImportBatch({
       firstDuplicateMatch,
       importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
     },
+  };
+}
+
+function buildInputDedupeDebug(input: any) {
+  return {
+    inputExternalProductId: input.externalProductId,
+    normalizedExternalProductId: input.externalProductId,
+    inputProductUrl: input.originalUrl || input.affiliateUrl || '',
+    normalizedProductUrl: input.originalUrl || input.affiliateUrl || '',
+    inputSourceProvider: input.sourceProvider,
+    inputMarketplace: input.marketplace,
   };
 }
