@@ -35,7 +35,236 @@ function normalizeSourceProvider(value: string | null | undefined): Product['sou
 }
 
 function isMissingDeletedAtColumn(error: any) {
-  return error?.code === '42703' && String(error?.message || '').includes('deleted_at');
+  const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
+  return Boolean(text.includes('deleted_at') && (error?.code === '42703' || error?.code === 'PGRST204' || text));
+}
+
+export type ProductSaveError = {
+  operation: 'insert' | 'update';
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+  missingColumns?: string[];
+  payload: Record<string, any>;
+};
+
+function compactPayload(payload: Record<string, any>) {
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
+}
+
+function findMissingColumns(error: any) {
+  const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
+  const patterns = [
+    /Could not find the ['"]([a-z_]+)['"] column/gi,
+    /column ['"]([a-z_]+)['"]/gi,
+    /['"]([a-z_]+)['"] column/gi,
+  ];
+  const matches = patterns.flatMap((pattern) =>
+    Array.from(text.matchAll(pattern)).map((match) => match[1]).filter(Boolean)
+  );
+  return Array.from(new Set(matches));
+}
+
+function serializeProductSaveError(
+  operation: ProductSaveError['operation'],
+  error: any,
+  payload: Record<string, any>,
+  missingColumns: string[] = []
+): ProductSaveError {
+  return {
+    operation,
+    message: error?.message || String(error),
+    code: error?.code,
+    details: error?.details,
+    hint: error?.hint,
+    missingColumns: Array.from(new Set([...missingColumns, ...findMissingColumns(error)])),
+    payload,
+  };
+}
+
+async function writeProductWithMissingColumnRetry<T>(
+  operation: ProductSaveError['operation'],
+  initialPayload: Record<string, any>,
+  write: (payload: Record<string, any>) => Promise<{ data: T | null; error: any }>
+) {
+  const payload = { ...initialPayload };
+  const missingColumns: string[] = [];
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const { data, error } = await write(payload);
+    if (!error) return { data, error: null, payload, missingColumns };
+
+    const removableColumns = findMissingColumns(error).filter((column) => column in payload);
+    if (removableColumns.length > 0) {
+      for (const column of removableColumns) {
+        delete payload[column];
+        missingColumns.push(column);
+      }
+      continue;
+    }
+
+    return {
+      data: null,
+      error: serializeProductSaveError(operation, error, payload, missingColumns),
+      payload,
+      missingColumns,
+    };
+  }
+
+  return {
+    data: null,
+    error: {
+      operation,
+      message: 'Supabase write failed after removing unsupported columns',
+      missingColumns,
+      payload,
+    } satisfies ProductSaveError,
+    payload,
+    missingColumns,
+  };
+}
+
+export function mapProductToSupabaseInsert(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) {
+  const sourceProvider = product.sourceProvider || product.sourceType || 'manual';
+  const originalUrl = product.originalUrl || product.affiliateUrl || '';
+
+  return compactPayload({
+    title: product.title,
+    description: product.description || '',
+    price: Number(product.price || 0),
+    old_price: product.oldPrice ?? null,
+    currency: product.currency || 'RUB',
+    marketplace: product.marketplace || 'other',
+    original_url: originalUrl,
+    affiliate_url: product.affiliateUrl || null,
+    admitad_deeplink: product.admitadDeeplink || null,
+    admitad_campaign_id: product.admitadCampaignId || null,
+    admitad_offer_id: product.admitadOfferId || null,
+    epn_token: product.epnToken || null,
+    advertiser_name: product.advertiserName || null,
+    external_product_id: product.externalProductId || null,
+    image_url: product.imageUrl || null,
+    recipients: product.recipients || [],
+    budget: product.budget || '',
+    interests: product.interests || [],
+    occasions: product.occasions || [],
+    gift_types: product.giftTypes || [],
+    tags: product.tags || [],
+    wow_rating: product.wowRating || 7,
+    risk_level: product.riskLevel || 'low',
+    is_best_price: product.isBestPrice || false,
+    discount_percent: product.discountPercent ?? null,
+    is_active: product.isActive ?? true,
+    status: product.status || 'active',
+    source_provider: sourceProvider,
+    source_type: product.sourceType || sourceProvider,
+    last_synced_at: product.lastSyncedAt || null,
+  });
+}
+
+function mapProductToSupabaseUpdate(
+  updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>
+) {
+  const sourceProvider = updates.sourceProvider || updates.sourceType;
+  return compactPayload({
+    ...(updates.title !== undefined && { title: updates.title }),
+    ...(updates.description !== undefined && { description: updates.description || '' }),
+    ...(updates.price !== undefined && { price: Number(updates.price || 0) }),
+    ...(updates.oldPrice !== undefined && { old_price: updates.oldPrice ?? null }),
+    ...(updates.currency !== undefined && { currency: updates.currency || 'RUB' }),
+    ...(updates.marketplace !== undefined && { marketplace: updates.marketplace || 'other' }),
+    ...(updates.originalUrl !== undefined && { original_url: updates.originalUrl || updates.affiliateUrl || '' }),
+    ...(updates.affiliateUrl !== undefined && { affiliate_url: updates.affiliateUrl || null }),
+    ...(updates.admitadDeeplink !== undefined && { admitad_deeplink: updates.admitadDeeplink || null }),
+    ...(updates.admitadCampaignId !== undefined && { admitad_campaign_id: updates.admitadCampaignId || null }),
+    ...(updates.admitadOfferId !== undefined && { admitad_offer_id: updates.admitadOfferId || null }),
+    ...(updates.epnToken !== undefined && { epn_token: updates.epnToken || null }),
+    ...(updates.advertiserName !== undefined && { advertiser_name: updates.advertiserName || null }),
+    ...(updates.externalProductId !== undefined && { external_product_id: updates.externalProductId || null }),
+    ...(updates.imageUrl !== undefined && { image_url: updates.imageUrl || null }),
+    ...(updates.recipients !== undefined && { recipients: updates.recipients || [] }),
+    ...(updates.budget !== undefined && { budget: updates.budget || '' }),
+    ...(updates.interests !== undefined && { interests: updates.interests || [] }),
+    ...(updates.occasions !== undefined && { occasions: updates.occasions || [] }),
+    ...(updates.giftTypes !== undefined && { gift_types: updates.giftTypes || [] }),
+    ...(updates.tags !== undefined && { tags: updates.tags || [] }),
+    ...(updates.wowRating !== undefined && { wow_rating: updates.wowRating || 7 }),
+    ...(updates.riskLevel !== undefined && { risk_level: updates.riskLevel || 'low' }),
+    ...(updates.isBestPrice !== undefined && { is_best_price: updates.isBestPrice || false }),
+    ...(updates.discountPercent !== undefined && { discount_percent: updates.discountPercent ?? null }),
+    ...(updates.isActive !== undefined && { is_active: updates.isActive }),
+    ...(updates.status !== undefined && { status: updates.status || 'active' }),
+    ...(sourceProvider !== undefined && { source_provider: sourceProvider }),
+    ...(updates.sourceType !== undefined && { source_type: updates.sourceType || sourceProvider }),
+    ...(updates.lastSyncedAt !== undefined && { last_synced_at: updates.lastSyncedAt || null }),
+  });
+}
+
+async function createProductDetailed(
+  product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>,
+  supabase = supabaseAdmin
+): Promise<{ product: Product | null; error: ProductSaveError | null }> {
+  if (!supabase) {
+    return {
+      product: null,
+      error: {
+        operation: 'insert',
+        message: 'Supabase service client is not configured',
+        payload: mapProductToSupabaseInsert(product),
+      },
+    };
+  }
+
+  const payload = mapProductToSupabaseInsert(product);
+  const { data, error } = await writeProductWithMissingColumnRetry('insert', payload, async (nextPayload) => {
+    const result = await supabase
+      .from('products')
+      .insert(nextPayload)
+      .select()
+      .single();
+    return { data: result.data, error: result.error };
+  });
+
+  if (error) {
+    return { product: null, error };
+  }
+
+  return { product: rowToProduct(data as ProductRow), error: null };
+}
+
+async function updateProductDetailed(
+  id: string,
+  updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>,
+  supabase = supabaseAdmin
+): Promise<{ product: Product | null; error: ProductSaveError | null }> {
+  if (!supabase) {
+    return {
+      product: null,
+      error: {
+        operation: 'update',
+        message: 'Supabase service client is not configured',
+        payload: mapProductToSupabaseUpdate(updates),
+      },
+    };
+  }
+
+  const payload = mapProductToSupabaseUpdate(updates);
+  const { data, error } = await writeProductWithMissingColumnRetry('update', payload, async (nextPayload) => {
+    const result = await supabase
+      .from('products')
+      .update(nextPayload)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data: result.data, error: result.error };
+  });
+
+  if (error) {
+    return { product: null, error };
+  }
+
+  return { product: rowToProduct(data as ProductRow), error: null };
 }
 
 /**
@@ -232,58 +461,10 @@ export async function createProduct(
   product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>,
   supabase = supabaseAdmin
 ): Promise<Product | null> {
-  if (!supabase) return null;
-
-  const sourceProvider = product.sourceProvider || product.sourceType || 'manual';
-
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        title: product.title,
-        description: product.description,
-        price: product.price,
-        old_price: product.oldPrice,
-        currency: product.currency,
-        marketplace: product.marketplace,
-        original_url: product.originalUrl,
-        affiliate_url: product.affiliateUrl,
-        admitad_deeplink: product.admitadDeeplink,
-        admitad_campaign_id: product.admitadCampaignId,
-        admitad_offer_id: product.admitadOfferId,
-        epn_token: product.epnToken,
-        advertiser_name: product.advertiserName,
-        external_product_id: product.externalProductId,
-        image_url: product.imageUrl,
-        recipients: product.recipients,
-        budget: product.budget,
-        interests: product.interests,
-        occasions: product.occasions,
-        gift_types: product.giftTypes,
-        tags: product.tags,
-        wow_rating: product.wowRating,
-        risk_level: product.riskLevel,
-        is_best_price: product.isBestPrice,
-        discount_percent: product.discountPercent,
-        is_active: product.isActive,
-        status: product.status || 'active',
-        source_provider: sourceProvider,
-        source_type: product.sourceType || sourceProvider,
-        last_synced_at: product.lastSyncedAt,
-        import_status: product.importStatus,
-        enrichment_status: product.enrichmentStatus,
-        source_feed_id: product.sourceFeedId,
-        parse_errors: product.parseErrors,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating product:', error);
-      return null;
-    }
-
-    return rowToProduct(data as ProductRow);
+    const result = await createProductDetailed(product, supabase);
+    if (result.error) console.error('Error creating product:', result.error);
+    return result.product;
   } catch (error) {
     console.error('Error creating product:', error);
     return null;
@@ -312,6 +493,7 @@ export type ProductUpsertDedupeResult = {
   product: Product | null;
   action: 'created' | 'updated' | 'skipped';
   reason: ProductDedupeReason;
+  saveError?: ProductSaveError | null;
   matchedBy?: 'source_external_id' | 'marketplace_external_id' | 'product_url' | 'title_price_image';
   duplicateMatch?: {
     matchedBy?: string;
@@ -432,21 +614,23 @@ export async function upsertProductWithDedupe(
           duplicateMatch,
         };
       }
-      const updated = await updateProduct(existing.id, product, supabase);
+      const updateResult = await updateProductDetailed(existing.id, product, supabase);
       return {
-        product: updated,
-        action: updated ? 'updated' : 'skipped',
-        reason: updated ? 'updated_existing' : 'not_saved',
+        product: updateResult.product,
+        action: updateResult.product ? 'updated' : 'skipped',
+        reason: updateResult.product ? 'updated_existing' : 'not_saved',
+        saveError: updateResult.error,
         matchedBy,
         duplicateMatch,
       };
     }
 
-    const created = await createProduct(product, supabase);
+    const createResult = await createProductDetailed(product, supabase);
     return {
-      product: created,
-      action: created ? 'created' : 'skipped',
-      reason: created ? 'created_new' : 'not_saved',
+      product: createResult.product,
+      action: createResult.product ? 'created' : 'skipped',
+      reason: createResult.product ? 'created_new' : 'not_saved',
+      saveError: createResult.error,
       duplicateMatch: null,
     };
   } catch (error) {
@@ -465,119 +649,10 @@ export async function updateProduct(
   updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>,
   supabase = supabaseAdmin
 ): Promise<Product | null> {
-  if (!supabase) return null;
-
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .update({
-        ...(updates.title !== undefined && { title: updates.title }),
-        ...(updates.description !== undefined && {
-          description: updates.description,
-        }),
-        ...(updates.price !== undefined && { price: updates.price }),
-        ...(updates.oldPrice !== undefined && { old_price: updates.oldPrice }),
-        ...(updates.currency !== undefined && { currency: updates.currency }),
-        ...(updates.marketplace !== undefined && {
-          marketplace: updates.marketplace,
-        }),
-        ...(updates.originalUrl !== undefined && {
-          original_url: updates.originalUrl,
-        }),
-        ...(updates.affiliateUrl !== undefined && {
-          affiliate_url: updates.affiliateUrl,
-        }),
-        ...(updates.admitadDeeplink !== undefined && {
-          admitad_deeplink: updates.admitadDeeplink,
-        }),
-        ...(updates.admitadCampaignId !== undefined && {
-          admitad_campaign_id: updates.admitadCampaignId,
-        }),
-        ...(updates.admitadOfferId !== undefined && {
-          admitad_offer_id: updates.admitadOfferId,
-        }),
-        ...(updates.epnToken !== undefined && { epn_token: updates.epnToken }),
-        ...(updates.advertiserName !== undefined && {
-          advertiser_name: updates.advertiserName,
-        }),
-        ...(updates.externalProductId !== undefined && {
-          external_product_id: updates.externalProductId,
-        }),
-        ...(updates.imageUrl !== undefined && { image_url: updates.imageUrl }),
-        ...(updates.recipients !== undefined && {
-          recipients: updates.recipients,
-        }),
-        ...(updates.budget !== undefined && { budget: updates.budget }),
-        ...(updates.interests !== undefined && { interests: updates.interests }),
-        ...(updates.occasions !== undefined && { occasions: updates.occasions }),
-        ...(updates.giftTypes !== undefined && {
-          gift_types: updates.giftTypes,
-        }),
-        ...(updates.tags !== undefined && { tags: updates.tags }),
-        ...(updates.wowRating !== undefined && {
-          wow_rating: updates.wowRating,
-        }),
-        ...(updates.riskLevel !== undefined && {
-          risk_level: updates.riskLevel,
-        }),
-        ...(updates.isBestPrice !== undefined && {
-          is_best_price: updates.isBestPrice,
-        }),
-        ...(updates.discountPercent !== undefined && {
-          discount_percent: updates.discountPercent,
-        }),
-        ...(updates.isActive !== undefined && { is_active: updates.isActive }),
-        ...(updates.status !== undefined && { status: updates.status }),
-        ...(updates.sourceProvider !== undefined && {
-          source_provider: updates.sourceProvider,
-        }),
-        ...(updates.sourceType !== undefined && {
-          source_type: updates.sourceType,
-        }),
-        ...(updates.lastSyncedAt !== undefined && {
-          last_synced_at: updates.lastSyncedAt,
-        }),
-        ...(updates.lastPriceCheckedAt !== undefined && {
-          last_price_checked_at: updates.lastPriceCheckedAt,
-        }),
-        ...(updates.priceLastCheckedAt !== undefined && {
-          price_last_checked_at: updates.priceLastCheckedAt,
-        }),
-        ...(updates.priceCheckStatus !== undefined && {
-          price_check_status: updates.priceCheckStatus,
-        }),
-        ...(updates.priceStale !== undefined && {
-          price_stale: updates.priceStale,
-        }),
-        ...(updates.importStatus !== undefined && {
-          import_status: updates.importStatus,
-        }),
-        ...(updates.enrichmentStatus !== undefined && {
-          enrichment_status: updates.enrichmentStatus,
-        }),
-        ...(updates.sourceFeedId !== undefined && {
-          source_feed_id: updates.sourceFeedId,
-        }),
-        ...(updates.parseErrors !== undefined && {
-          parse_errors: updates.parseErrors,
-        }),
-        ...(updates.deletedAt !== undefined && {
-          deleted_at: updates.deletedAt,
-        }),
-        ...(updates.deletedReason !== undefined && {
-          deleted_reason: updates.deletedReason,
-        }),
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating product:', error);
-      return null;
-    }
-
-    return rowToProduct(data as ProductRow);
+    const result = await updateProductDetailed(id, updates, supabase);
+    if (result.error) console.error('Error updating product:', result.error);
+    return result.product;
   } catch (error) {
     console.error('Error updating product:', error);
     return null;

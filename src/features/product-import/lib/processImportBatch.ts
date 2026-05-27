@@ -35,7 +35,7 @@ export type ImportBatchReport = {
     firstParsedRow: any;
     columnMapping: Record<string, string>;
     firstNormalizedItem: any;
-    firstSaveError: string | null;
+    firstSaveError: any;
     firstDuplicateMatch: any;
     importPayloadSize: number;
   };
@@ -87,7 +87,7 @@ function normalizeRow(row: Record<string, any>, mapping: Record<string, string>,
   if (datasetType === 'sadovod_qparser' || normalizedInput.marketplace === 'sadovod') {
     normalizedInput.marketplace = 'sadovod';
     normalizedInput.sourceProvider = 'sadovod' as any;
-    normalizedInput.sourceType = 'feed' as any;
+    normalizedInput.sourceType = 'file_import' as any;
     if (normalizedInput.externalProductId && !String(normalizedInput.externalProductId).startsWith('sadovod:')) {
       normalizedInput.externalProductId = `sadovod:${normalizedInput.externalProductId}`;
     }
@@ -164,7 +164,7 @@ export async function processImportBatch({
   let skippedAlreadyInBatch = 0;
   let skippedDuplicate = 0;
   let duplicates = 0;
-  let firstSaveError: string | null = null;
+  let firstSaveError: any = null;
   let firstDuplicateMatch: any = null;
   const batchKeys = new Set<string>();
 
@@ -235,7 +235,12 @@ export async function processImportBatch({
         } else if (upsert.reason === 'not_saved' || upsert.reason === 'supabase_not_configured') {
           saveErrors += 1;
           errors += 1;
-          firstSaveError ||= upsert.reason;
+          firstSaveError ||= {
+            reason: upsert.reason,
+            ...upsert.saveError,
+            row,
+            productPayload: normalizedInput,
+          };
         } else {
           duplicates += 1;
           skippedDuplicate += 1;
@@ -252,13 +257,24 @@ export async function processImportBatch({
           existingTitle: upsert.duplicateMatch?.existingTitle,
         };
         firstDuplicateMatch ||= duplicateDebug;
-        if (reports.length < maxReports) reports.push({ row, status: 'skipped', reason: upsert.reason, matchedBy: upsert.matchedBy, duplicateMatch: upsert.duplicateMatch, dedupeDebug: duplicateDebug });
+        if (reports.length < maxReports) {
+          reports.push({
+            row,
+            status: upsert.reason === 'not_saved' || upsert.reason === 'supabase_not_configured' ? 'error' : 'skipped',
+            reason: upsert.reason,
+            saveError: upsert.saveError || null,
+            productPayload: normalizedInput,
+            matchedBy: upsert.matchedBy,
+            duplicateMatch: upsert.duplicateMatch,
+            dedupeDebug: duplicateDebug,
+          });
+        }
       }
     } catch (error) {
       errors += 1;
       saveErrors += 1;
       const reason = error instanceof Error ? error.message : String(error);
-      firstSaveError ||= reason;
+      firstSaveError ||= { message: reason, row };
       if (/duplicate/i.test(reason)) duplicates += 1;
       if (reports.length < maxReports) reports.push({ row, status: 'error', reason });
     }
