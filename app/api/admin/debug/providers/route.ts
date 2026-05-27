@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { providers } from '@/lib/providers';
+import { providers } from '@server/providers';
 import { getEpnHotGoods } from '@/lib/epn';
 
 export async function GET(request: NextRequest) {

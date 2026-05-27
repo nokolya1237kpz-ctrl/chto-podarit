@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { browserParser } from '@/lib/parsers/browserParser';
-import { normalizeParsedProduct } from '@/lib/parsers/normalizeParsedProduct';
+import { browserParser } from '@server/parsers/browserParser';
+import { normalizeParsedProduct } from '@server/parsers/normalizeParsedProduct';
 import { importNormalizedProduct } from '@/lib/importProduct';
 import { detectMarketplaceFromProductUrl } from '@/lib/epn';
 

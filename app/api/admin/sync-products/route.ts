@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { getProductSources, upsertProductByExternalId, createProduct, logProductSync } from '@/lib/supabase';
-import { getProviderById } from '@/lib/providers';
+import { getProviderById } from '@server/providers';
 
 export async function POST(request: NextRequest) {
   try {

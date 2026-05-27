@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
-import { applyColumnMapping, normalizeMappedRow, parseImportFile } from '@/lib/fileImport';
-import { importNormalizedProduct } from '@/lib/importProduct';
-import { detectDatasetType, normalizeOzonDatasetItem } from '@/lib/scraperDataset';
+import { parseImportFile } from '@/lib/fileImport';
+import { processImportBatch } from '@features/product-import/lib/processImportBatch';
 
 export async function POST(request: NextRequest) {
   const isAdmin = await verifyAdminSession();
@@ -11,11 +10,13 @@ export async function POST(request: NextRequest) {
   try {
     let rows: Record<string, any>[] = [];
     let mapping: Record<string, string> = {};
+    let detectedDelimiter = '';
 
     if (request.headers.get('content-type')?.includes('application/json')) {
       const body = await request.json();
       rows = Array.isArray(body.items) ? body.items : [];
       mapping = body.columnMapping || body.mapping || {};
+      detectedDelimiter = body.detectedDelimiter || '';
     } else {
       const form = await request.formData();
       const file = form.get('file');
@@ -27,92 +28,50 @@ export async function POST(request: NextRequest) {
     if (rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'no_items_in_file',
+        error: 'В файле не найдены товары',
         reason: 'no_items_in_file',
         total: 0,
         detectedRows: 0,
       }, { status: 400 });
     }
 
-    let imported = 0;
-    let importedActive = 0;
-    let importedDraft = 0;
-    let skipped = 0;
-    let errors = 0;
-    const reports: any[] = [];
-    const datasetType = detectDatasetType(rows);
-    const firstNormalizedItem = datasetType === 'ozon_scraper'
-      ? normalizeOzonDatasetItem({ ...rows[0], ...applyColumnMapping(rows[0] || {}, mapping) })
-      : normalizeMappedRow(applyColumnMapping(rows[0] || {}, mapping), 'feed');
+    const report = await processImportBatch({
+      rows,
+      mapping,
+      detectedDelimiter,
+    });
 
-    for (const row of rows.slice(0, 3000)) {
-      try {
-        const mapped = applyColumnMapping(row, mapping);
-        const normalizedInput = datasetType === 'ozon_scraper'
-          ? normalizeOzonDatasetItem({ ...row, ...mapped })
-          : normalizeMappedRow(mapped, 'feed');
-        if (!normalizedInput.title) {
-          skipped += 1;
-          if (reports.length < 100) reports.push({ row, status: 'skipped', reason: 'missing_title' });
-          continue;
-        }
-        const saved = await importNormalizedProduct(normalizedInput);
-        if (saved) imported += 1;
-        if (saved?.status === 'active') importedActive += 1;
-        if (saved?.status === 'draft') importedDraft += 1;
-        if (!saved) {
-          skipped += 1;
-          if (reports.length < 100) reports.push({ row, status: 'skipped', reason: 'not_saved' });
-        } else if (reports.length < 100) {
-          reports.push({ title: saved.title, status: saved.status, reason: saved.importStatus });
-        }
-      } catch (error) {
-        errors += 1;
-        if (reports.length < 100) reports.push({ row, status: 'error', reason: error instanceof Error ? error.message : String(error) });
-      }
-    }
+    const response = {
+      success: report.imported > 0,
+      ...report,
+      total: rows.length,
+      detectedRows: rows.length,
+      imported: report.imported,
+      importedActive: report.importedActive,
+      importedDraft: report.importedDraft,
+      skipped: report.skipped,
+      errors: report.errors,
+    };
 
-    if (imported === 0) {
-      const reason = reports[0]?.reason || 'no_items_imported';
+    if (report.imported === 0) {
+      const reason = report.reports[0]?.reason || report.debug.firstSaveError || 'Не удалось сохранить товары';
       return NextResponse.json({
+        ...response,
         success: false,
-        error: reason,
+        error: humanizeImportReason(reason),
         reason,
-        imported,
-        importedActive,
-        importedDraft,
-        skipped,
-        errors,
-        total: rows.length,
-        detectedRows: rows.length,
-        debug: {
-          detectedDatasetType: datasetType,
-          arrayLength: rows.length,
-          firstNormalizedItem,
-          importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
-        },
-        reports,
       }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      imported,
-      importedActive,
-      importedDraft,
-      skipped,
-      errors,
-      total: rows.length,
-      detectedRows: rows.length,
-      debug: {
-        detectedDatasetType: datasetType,
-        arrayLength: rows.length,
-        firstNormalizedItem,
-        importPayloadSize: JSON.stringify({ items: rows, columnMapping: mapping }).length,
-      },
-      reports,
-    });
+    return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка импорта файла' }, { status: 500 });
   }
+}
+
+function humanizeImportReason(reason: string) {
+  if (reason === 'missing_title') return 'В строках не найдено название товара';
+  if (reason === 'duplicate_or_deleted') return 'Товары уже существуют или были удалены ранее';
+  if (reason === 'no_items_imported') return 'Не удалось импортировать товары';
+  return reason;
 }

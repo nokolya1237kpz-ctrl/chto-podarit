@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Product } from '@/types/product';
 import { getActiveProducts, supabaseAdmin } from '@/lib/supabase';
 import { getEpnHotGoods, mapEpnGoodToProduct } from '@/lib/epn';
-import { providers } from '@/lib/providers';
+import { providers } from '@server/providers';
 import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormalize';
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';

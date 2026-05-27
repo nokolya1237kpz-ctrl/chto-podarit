@@ -5,6 +5,22 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "no-restricted-imports": ["warn", {
+        patterns: [
+          {
+            group: ["../*", "../../*", "../../../*", "../../../../*"],
+            message: "Используйте path aliases вместо глубоких относительных импортов."
+          },
+          {
+            group: ["@server/*"],
+            message: "Проверьте, что @server/* импортируется только из server/API кода, а не из client UI."
+          }
+        ]
+      }]
+    }
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

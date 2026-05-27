@@ -1,0 +1,11 @@
+export * from './schema';
+export * from './api/searchCompareProducts';
+export * from './lib/calculateCheapestOffer';
+export * from './lib/calculateBestPrice';
+export * from './lib/comparePipeline';
+export * from './lib/groupOffers';
+export * from './lib/groupPriceOffers';
+export * from './lib/normalizeCompareResults';
+export * from './model/store';
+export * from './model/types';
+export { default as ComparePageFeature } from './ui/ComparePageFeature';
