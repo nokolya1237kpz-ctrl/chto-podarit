@@ -2,7 +2,7 @@ import type { Product } from '@entities/product/types';
 
 /**
  * Get the final URL for a product, preferring affiliate links
- * Priority: affiliateUrl > admitadDeeplink > originalUrl
+ * Priority: affiliateUrl > admitadDeeplink > originalUrl > productUrl
  */
 export function getProductFinalUrl(product: Product): string {
   if (product.affiliateUrl) {
@@ -11,7 +11,7 @@ export function getProductFinalUrl(product: Product): string {
   if (product.admitadDeeplink) {
     return product.admitadDeeplink;
   }
-  return product.originalUrl || '';
+  return product.originalUrl || (product as any).productUrl || '';
 }
 
 /**

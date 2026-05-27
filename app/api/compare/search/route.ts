@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const local = (await getActiveProducts(supabaseAdmin as any)).filter((product) => {
-      const text = `${product.title} ${product.description || ''}`.toLowerCase();
+      const text = `${product.title} ${product.description || ''} ${product.categoryLabel || ''} ${product.externalProductId || ''} ${(product.tags || []).join(' ')}`.toLowerCase();
       return (!query || text.includes(query.toLowerCase())) && (!marketplace || product.marketplace === marketplace);
     });
     sourceStats.local = { count: local.length, status: 'active' };

@@ -63,6 +63,7 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
   const isSport = includesAny(text, ['спорт', 'фитнес', 'валик', 'тренажер', 'йога']);
   const isGadget = includesAny(text, ['гаджет', 'наушники', 'электроника', 'технолог', 'музыка']);
   const isBook = includesAny(text, ['книга', 'литрес', 'чтение', 'саморазвитие']);
+  const isAuto = includesAny(text, ['автотовары', 'fm-модулятор', 'автомобиль', 'ароматизатор', 'машина', 'авто', 'держатель']);
 
   if (isBeauty) {
     recipients.push('girlfriend', 'wife', 'sister', 'mom', 'teenage_girl');
@@ -93,6 +94,12 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
   if (isBook) {
     interests.push('книги', 'саморазвитие', 'чтение');
     giftTypes.push('книга', 'саморазвитие');
+  }
+
+  if (isAuto) {
+    recipients.push('boyfriend', 'dad', 'friend');
+    interests.push('авто', 'техника', 'автоаксессуары');
+    giftTypes.push('автотовар', 'аксессуар для авто');
   }
 
   if (recipients.length === 0) {

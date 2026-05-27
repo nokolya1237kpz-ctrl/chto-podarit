@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
+import { PUBLIC_CATEGORIES } from '@entities/product/lib/categoryMapper';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://xn----8sba3adk3a1a.xn--p1ai';
@@ -10,6 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '',
     '/quiz',
     '/results',
+    '/catalog',
+    ...PUBLIC_CATEGORIES.map((category) => `/catalog/${category.slug}`),
     '/compare',
     ...tags.map((tag) => `/compare?q=${encodeURIComponent(tag)}`),
   ].map((path) => ({

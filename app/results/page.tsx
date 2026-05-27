@@ -69,7 +69,7 @@ export default async function ResultsPage({
 
             <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-400">
               {noMatchFallback
-                ? 'Пока точных совпадений нет — показываем популярные идеи.'
+                ? 'Подходящих товаров мало — попробуйте изменить бюджет или интересы.'
                 : hasFilters
                 ? 'Мы подобрали товары, соответствующие выбранным фильтрам.'
                 : 'Здесь отображаются все активные товары из базы данных.'}
@@ -86,7 +86,19 @@ export default async function ResultsPage({
 
           <div className="grid grid-cols-1 gap-4 sm:gap-7 xl:grid-cols-2 w-full">
             {matched.map((product) => (
-              <GiftCard key={product.id} gift={product} />
+              <div key={product.id} className="space-y-3">
+                <GiftCard gift={product} />
+                {Array.isArray((product as any).matchReasons) && (product as any).matchReasons.length ? (
+                  <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">Почему подходит</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(product as any).matchReasons.map((reason: string) => (
+                        <span key={reason} className="rounded-full bg-white/10 px-3 py-1 text-xs text-emerald-50">{reason}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             ))}
           </div>
           {matched.length === 0 ? (

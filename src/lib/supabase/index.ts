@@ -7,6 +7,7 @@ import type {
   ProductSyncLog,
   ProductSyncLogRow,
 } from '@entities/product/types';
+import { enrichProductCategory } from '@entities/product/lib/categoryMapper';
 import { normalizeAffiliateProduct } from '@/lib/affiliate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -271,7 +272,7 @@ async function updateProductDetailed(
  * Transform database row to Product
  */
 function rowToProduct(row: ProductRow): Product {
-  return {
+  return enrichProductCategory({
     id: row.id,
     title: row.title,
     description: row.description || undefined,
@@ -321,7 +322,7 @@ function rowToProduct(row: ProductRow): Product {
     deletedReason: row.deleted_reason || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  };
+  });
 }
 
 export async function getActiveProducts(
@@ -355,7 +356,9 @@ export async function getActiveProducts(
       return [];
     }
 
-    return (data as ProductRow[]).map(rowToProduct);
+    return (data as ProductRow[])
+      .map(rowToProduct)
+      .filter((product) => product.title && product.price > 0 && product.imageUrl);
   } catch (error) {
     console.error('Error fetching products:', error);
     if (options?.throwOnError) {
@@ -430,7 +433,10 @@ export async function searchProducts(
       }
 
       if (filters.query) {
-        query = query.ilike('title', `%${filters.query}%`);
+        const term = filters.query.replace(/[%(),]/g, ' ').trim();
+        if (term) {
+          query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,external_product_id.ilike.%${term}%`);
+        }
       }
 
       return query;

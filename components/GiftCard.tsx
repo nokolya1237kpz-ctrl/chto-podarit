@@ -53,6 +53,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
       <div className="p-6 flex flex-col gap-5">
         <div className="space-y-3">
           <p className="inline-flex rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100">{gift.marketplace || 'Маркетплейс'}</p>
+          {gift.categoryLabel ? <p className="ml-2 inline-flex rounded-full border border-purple-300/15 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-100">{gift.categoryLabel}</p> : null}
           <h3 className="line-clamp-2 text-2xl font-semibold text-white">{gift.title || 'Товар без названия'}</h3>
           <p className="line-clamp-2 text-sm leading-6 text-slate-400">{gift.description || 'Описание появится после заполнения.'}</p>
         </div>

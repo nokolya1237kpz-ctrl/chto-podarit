@@ -60,6 +60,8 @@ export interface Product {
   occasions: string[];
   giftTypes: string[];
   tags: string[];
+  categorySlug?: string;
+  categoryLabel?: string;
   wowRating: number;
   riskLevel: RiskLevel;
   isBestPrice?: boolean;

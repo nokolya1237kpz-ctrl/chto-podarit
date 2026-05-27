@@ -1,6 +1,7 @@
 import type { Product } from '@entities/product/types';
 import { DataTable, type DataTableColumn } from '@components/ui';
 import { getMarketplaceName } from '@/lib/marketplaces';
+import { calculateQualityScore, getProductCategory } from '@entities/product';
 import { ProductActionsMenu } from './ProductActionsMenu';
 import { ProductStatusBadge } from './ProductStatusBadge';
 
@@ -40,6 +41,11 @@ export function ProductTable({ products, loading, onDelete, onArchive, onRestore
       ),
     },
     { key: 'price', header: 'Цена', cell: (product) => `${product.price.toLocaleString('ru-RU')} ₽` },
+    { key: 'category', header: 'Категория', cell: (product) => {
+      const category = getProductCategory(product);
+      return <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">{category.label}</span>;
+    } },
+    { key: 'quality', header: 'Качество', cell: (product) => `${calculateQualityScore(product)}%` },
     { key: 'marketplace', header: 'Маркетплейс', cell: (product) => getMarketplaceName(product.marketplace) },
     { key: 'source', header: 'Источник', cell: (product) => <span className="text-purple-300">{translateSourceType(product.sourceType)}</span> },
     { key: 'status', header: 'Статус', cell: (product) => <ProductStatusBadge product={product} /> },

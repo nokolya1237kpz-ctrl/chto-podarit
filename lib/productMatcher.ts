@@ -1,4 +1,5 @@
 import type { Product } from '@/types/product';
+import { scoreProductForGift, type GiftQuizAnswers } from '@features/gift-quiz/lib/giftScoring';
 
 export interface MatchFilters {
   recipient?: string;
@@ -12,58 +13,19 @@ export interface MatchFilters {
  * Match products based on quiz answers
  */
 export function matchProducts(products: Product[], filters: MatchFilters): Product[] {
-  let matched = products.filter((p) => p.isActive);
-
-  // Filter by recipient
-  if (filters.recipient) {
-    matched = matched.filter((p) =>
-      p.recipients.some((r) => r.toLowerCase().includes(filters.recipient!.toLowerCase()))
-    );
-  }
-
-  // Filter by budget
-  if (filters.budget) {
-    matched = matched.filter((p) => p.budget === filters.budget);
-  }
-
-  // Filter by interests (at least one match)
-  if (filters.interests && filters.interests.length > 0) {
-    matched = matched.filter((p) =>
-      p.interests.some((i) =>
-        filters.interests!.some((f) => i.toLowerCase().includes(f.toLowerCase()))
-      )
-    );
-  }
-
-  // Filter by occasions (at least one match)
-  if (filters.occasions && filters.occasions.length > 0) {
-    matched = matched.filter((p) =>
-      p.occasions.some((o) =>
-        filters.occasions!.some((f) => o.toLowerCase().includes(f.toLowerCase()))
-      )
-    );
-  }
-
-  // Filter by gift types (at least one match)
-  if (filters.giftTypes && filters.giftTypes.length > 0) {
-    matched = matched.filter((p) =>
-      p.giftTypes.some((g) =>
-        filters.giftTypes!.some((f) => g.toLowerCase().includes(f.toLowerCase()))
-      )
-    );
-  }
-
-  // Sort by wow rating (descending) and best price
-  matched.sort((a, b) => {
-    // Best price products first
-    if (a.isBestPrice && !b.isBestPrice) return -1;
-    if (!a.isBestPrice && b.isBestPrice) return 1;
-    // Then by wow rating
-    return b.wowRating - a.wowRating;
-  });
-
-  // Return top 10
-  return matched.slice(0, 10);
+  const answers: GiftQuizAnswers = filters;
+  return products
+    .filter((product) => product.isActive && product.status === 'active')
+    .map((product) => {
+      const result = scoreProductForGift(product, answers);
+      return { ...product, giftScorePreview: result.score, matchReasons: result.reasons } as Product & {
+        giftScorePreview: number;
+        matchReasons: string[];
+      };
+    })
+    .filter((product) => product.giftScorePreview > 20)
+    .sort((a, b) => b.giftScorePreview - a.giftScorePreview)
+    .slice(0, 10);
 }
 
 /**

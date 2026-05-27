@@ -8,6 +8,7 @@ import SafeProductImage from '@/components/SafeProductImage';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { enrichTrendProduct, getPopularClickCounts, shuffleProducts } from '@/lib/trends';
+import { PUBLIC_CATEGORIES, getProductCategory } from '@entities/product/lib/categoryMapper';
 
 export default async function Home() {
   let products: Product[] = [];
@@ -27,6 +28,7 @@ export default async function Home() {
   const cheapestDeals = [...products].filter((product) => product.price > 0).sort((a, b) => a.price - b.price).slice(0, 6);
   const newArrivals = [...products].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 6);
   const randomProducts = shuffleProducts(products, 6);
+  const byCategory = (slug: string) => products.filter((product) => getProductCategory(product).slug === slug).slice(0, 6);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.16),transparent_25%),linear-gradient(180deg,#070a12,#0b1020)] text-white">
@@ -148,9 +150,35 @@ export default async function Home() {
             <PopularCollections />
           </section>
 
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-purple-300">Категории</p>
+                <h2 className="mt-2 text-2xl font-bold text-white">Популярные категории</h2>
+              </div>
+              <a href="/catalog" className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">Открыть каталог</a>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {PUBLIC_CATEGORIES.slice(0, 10).map((category) => {
+                const count = products.filter((product) => getProductCategory(product).slug === category.slug).length;
+                return (
+                  <a key={category.slug} href={`/catalog/${category.slug}`} className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-1 hover:border-purple-300/35 hover:bg-white/8">
+                    <div className="text-sm font-semibold text-white">{category.label}</div>
+                    <div className="mt-2 text-xs text-slate-400">{count} товаров</div>
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+
           <ProductRail title="Тренды TikTok и WB" subtitle="Вирусные хиты и небанальные идеи из каталога" products={trendingProducts.length ? trendingProducts : randomProducts} />
           <ProductRail title="Самые выгодные сегодня" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
           <ProductRail title="Новинки" subtitle="Свежие опубликованные товары, готовые к просмотрам" products={newArrivals.length ? newArrivals : randomProducts} />
+          <ProductRail title="Автотовары" subtitle="Автоаксессуары и полезные вещи для машины" products={byCategory('auto')} />
+          <ProductRail title="Электроника" subtitle="Гаджеты, кабели, музыка и техника" products={byCategory('electronics')} />
+          <ProductRail title="Косметика" subtitle="Красота, уход и приятные личные подарки" products={byCategory('beauty')} />
+          <ProductRail title="Дом и быт" subtitle="Товары для уюта, кухни и дома" products={[...byCategory('home'), ...byCategory('kitchen')].slice(0, 6)} />
+          <ProductRail title="Подарки" subtitle="Универсальные идеи для разных поводов" products={byCategory('gifts')} />
 
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_32px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

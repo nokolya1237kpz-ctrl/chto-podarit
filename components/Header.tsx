@@ -20,6 +20,7 @@ export default function Header() {
 
         <nav className="hidden items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1 sm:flex">
           <Link href="/quiz" className="rounded-full px-3 py-2 text-sm font-medium text-slate-200/88 transition hover:bg-white/8 hover:text-white">Анкета</Link>
+          <Link href="/catalog" className="rounded-full px-3 py-2 text-sm font-medium text-slate-200/88 transition hover:bg-white/8 hover:text-white">Каталог</Link>
           <Link href="/compare" className="rounded-full px-3 py-2 text-sm font-medium text-slate-200/88 transition hover:bg-white/8 hover:text-white">Сравнить цены</Link>
           <Link href="/trends" className="rounded-full px-3 py-2 text-sm font-medium text-slate-200/88 transition hover:bg-white/8 hover:text-white">Тренды</Link>
           <Link href="/results" className="rounded-full px-3 py-2 text-sm font-medium text-slate-200/88 transition hover:bg-white/8 hover:text-white">Результаты</Link>
@@ -50,6 +51,7 @@ export default function Header() {
         <div className="fixed left-0 right-0 top-[calc(56px+12px)] sm:top-[84px] z-40 mx-3 sm:mx-4 rounded-xl sm:rounded-[28px] border border-white/10 bg-slate-950/95 p-3 sm:p-4 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:hidden w-[calc(100%-24px)] box-border">
           <div className="flex flex-col gap-2">
             <Link href="/quiz" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Анкета</Link>
+            <Link href="/catalog" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Каталог</Link>
             <Link href="/compare" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Сравнить цены</Link>
             <Link href="/trends" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Тренды</Link>
             <Link href="/results" onClick={closeMenu} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">Результаты</Link>
