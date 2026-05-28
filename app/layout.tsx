@@ -5,8 +5,12 @@ import Analytics from '../components/Analytics';
 import Providers from '../components/Providers';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://xn----8sba3adk3a1a.xn--p1ai'),
   title: 'ЧтоПодарить — подбор подарка за 30 секунд',
   description: 'Быстрый подбор подарков по бюджету, интересам и поводу.',
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,11 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-1MFF0V10Z4"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
         />
         <Script
           id="google-analytics"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
@@ -33,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <Script
           id="yandex-metrika"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               (function(m,e,t,r,i,k,a){

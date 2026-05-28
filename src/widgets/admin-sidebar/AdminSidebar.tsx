@@ -17,6 +17,7 @@ export const adminMenu = [
   { href: '/admin/sources', label: 'Источники' },
   { href: '/admin/sync', label: 'Синхронизация' },
   { href: '/admin/analytics', label: 'Аналитика' },
+  { href: '/admin/system-status', label: 'Статус системы' },
   { href: '/admin/settings', label: 'Настройки' },
   { href: '/admin/quick-add-epn', label: 'Быстро добавить ePN' },
   { href: '/admin/admitad-import', label: 'Импорт из Admitad' },

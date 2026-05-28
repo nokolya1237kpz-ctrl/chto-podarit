@@ -3,6 +3,7 @@ import CatalogPage from '../page';
 import { PUBLIC_CATEGORIES } from '@entities/product/lib/categoryMapper';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
+import { withTimeout } from '@lib/utils/timeout';
 
 export async function generateMetadata({
   params,
@@ -26,7 +27,7 @@ export default async function CategoryCatalogPage({
 }) {
   const { category } = await params;
   const resolvedSearchParams = await searchParams;
-  const products = isSupabaseConfigured() ? await getActiveProducts() : [];
+  const products = isSupabaseConfigured() ? await withTimeout(getActiveProducts(), 3000, []) : [];
   const productsCount = products.filter((product) => product.categorySlug === category).length;
   await trackEvent(ANALYTICS_EVENTS.categoryView, {
     category,

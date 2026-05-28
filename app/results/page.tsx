@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import GiftCard from '@/components/GiftCard';
 import ResultsTracker from '@/components/ResultsTracker';
 import type { Product } from '@/types/product';
+import { withTimeout } from '@lib/utils/timeout';
 
 function getSearchParam(value: string | string[] | undefined) {
   if (!value) return '';
@@ -21,7 +22,7 @@ export default async function ResultsPage({
 
   let products: Product[] = [];
   if (isSupabaseConfigured()) {
-    products = await getActiveProducts();
+    products = await withTimeout(getActiveProducts(), 4000, []);
   }
 
   // Parse search params

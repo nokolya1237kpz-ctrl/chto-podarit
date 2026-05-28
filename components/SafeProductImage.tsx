@@ -28,6 +28,8 @@ export default function SafeProductImage({
           src={imageUrl as string}
           alt={alt}
           loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
           className={className}
           onError={() => setHasError(true)}
         />

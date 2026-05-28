@@ -4,6 +4,7 @@ import GiftCard from '@/components/GiftCard';
 import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import { PUBLIC_CATEGORIES, getProductCategory } from '@entities/product/lib/categoryMapper';
 import type { Product } from '@/types/product';
+import { withTimeout } from '@lib/utils/timeout';
 
 function getParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value || '';
@@ -46,7 +47,7 @@ export default async function CatalogPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const products = isSupabaseConfigured() ? await getActiveProducts() : [];
+  const products = isSupabaseConfigured() ? await withTimeout(getActiveProducts(), 4000, []) : [];
   const filtered = filterProducts(products, params);
   const sources = Array.from(new Set(products.map((product) => product.sourceProvider || product.marketplace).filter(Boolean)));
 

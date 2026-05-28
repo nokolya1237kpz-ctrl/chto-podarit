@@ -9,13 +9,14 @@ import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { enrichTrendProduct, getPopularClickCounts, shuffleProducts } from '@/lib/trends';
 import { PUBLIC_CATEGORIES, getProductCategory } from '@entities/product/lib/categoryMapper';
+import { withTimeout } from '@lib/utils/timeout';
 
 export default async function Home() {
   let products: Product[] = [];
   if (isSupabaseConfigured()) {
-    products = await getActiveProducts();
+    products = await withTimeout(getActiveProducts(), 4000, []);
   }
-  const clickCounts = await getPopularClickCounts();
+  const clickCounts = await withTimeout(getPopularClickCounts(), 1500, new Map());
   products = products.map((product) => enrichTrendProduct(product, {
     localClicks: clickCounts.get(product.id) || 0,
     importedRecently: product.createdAt ? Date.now() - new Date(product.createdAt).getTime() < 14 * 24 * 60 * 60 * 1000 : false,

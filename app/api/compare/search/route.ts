@@ -5,6 +5,7 @@ import { getEpnHotGoods, mapEpnGoodToProduct } from '@/lib/epn';
 import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormalize';
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
+import { withTimeout } from '@lib/utils/timeout';
 
 const marketplacePriority = ['local', 'sadovod', 'file_import', 'feed', 'epn', 'admitad', 'ozon', 'wildberries', 'manual'];
 const STOP_WORDS = new Set(['купить', 'цена', 'товар', 'для', 'код', 'артикул', 'новый', 'оригинал', 'на', 'и', 'в']);
@@ -97,7 +98,8 @@ export async function GET(request: NextRequest) {
   const diagnostics: any[] = [];
 
   try {
-    const local = (await getActiveProducts(supabaseAdmin as any))
+    const localProducts = await withTimeout(getActiveProducts(supabaseAdmin as any), 4000, []);
+    const local = localProducts
       .map((product) => ({ product, relevance: relevance(product, query) }))
       .filter((item) => (!query || item.relevance > 0) && (!marketplace || item.product.marketplace === marketplace))
       .sort((a, b) => b.relevance - a.relevance)
@@ -109,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     if (all.length < 8) {
       try {
-        const goods = await getEpnHotGoods({ q: query, limit: 8 });
+        const goods = await withTimeout(getEpnHotGoods({ q: query, limit: 8 }), 3500, []);
         const epnProducts = goods.map((good) => toCompareProduct(mapEpnGoodToProduct(good), 'epn'));
         all.push(...epnProducts);
         sourceStats.epn = { count: epnProducts.length, status: epnProducts.length ? 'active' : 'optional' };
