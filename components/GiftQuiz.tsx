@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QuizAnswers, Recipient, Budget, Occasion, Interest, GiftType } from '../types/gift';
 import { event } from '../lib/metrics';
+import { trackAnalyticsEvent } from '@/src/hooks/useTrackEvent';
 
 const recipients: Recipient[] = ['Девушка','Парню','Маме','Папе','Другу','Коллеге','Ребёнку'];
 const budgets: Budget[] = ['До 1000 ₽','1000–3000 ₽','3000–7000 ₽','7000–15000 ₽','15000 ₽+'];
@@ -47,6 +48,14 @@ export default function GiftQuiz() {
 
     try {
       event('quiz_submit', { answers });
+      trackAnalyticsEvent('gift_quiz_complete', {
+        metadata: {
+          recipient: answers.recipient,
+          budget: answers.budget,
+          interests: answers.interest ? [answers.interest] : [],
+          occasions: answers.occasion ? [answers.occasion] : [],
+        },
+      });
     } catch (err) {
       // ignore analytics failures
     }

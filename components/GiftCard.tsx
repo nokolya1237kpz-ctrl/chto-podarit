@@ -3,8 +3,10 @@ import React from 'react';
 import type { Product } from '@/types/product';
 import { getProductFinalUrl } from '@/lib/affiliate';
 import SafeProductImage from '@/components/SafeProductImage';
+import { useTrackEvent } from '@/src/hooks/useTrackEvent';
 
 export default function GiftCard({ gift }: { gift: Product }) {
+  const trackEvent = useTrackEvent();
   const [copied, setCopied] = React.useState(false);
   const [favorite, setFavorite] = React.useState(false);
   const productUrl = getProductFinalUrl(gift);
@@ -15,6 +17,17 @@ export default function GiftCard({ gift }: { gift: Product }) {
   React.useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('favoriteProducts') || '[]') as string[];
     setFavorite(stored.includes(String(gift.id)));
+    trackEvent('product_view', {
+      productId: gift.id,
+      category: gift.categorySlug || gift.categoryLabel,
+      marketplace: gift.marketplace,
+      metadata: {
+        product_id: gift.id,
+        category: gift.categoryLabel || gift.categorySlug,
+        marketplace: gift.marketplace,
+        source_page: window.location.pathname,
+      },
+    });
   }, [gift.id]);
 
   const copy = async () => {
@@ -33,6 +46,31 @@ export default function GiftCard({ gift }: { gift: Product }) {
     const next = stored.includes(id) ? stored.filter((item) => item !== id) : [id, ...stored].slice(0, 200);
     localStorage.setItem('favoriteProducts', JSON.stringify(next));
     setFavorite(next.includes(id));
+    trackEvent(next.includes(id) ? 'favorite_add' : 'favorite_remove', {
+      productId: gift.id,
+      category: gift.categorySlug || gift.categoryLabel,
+      marketplace: gift.marketplace,
+      metadata: {
+        product_id: gift.id,
+        marketplace: gift.marketplace,
+        category: gift.categoryLabel || gift.categorySlug,
+      },
+    });
+  };
+
+  const trackClick = () => {
+    trackEvent('product_click', {
+      productId: gift.id,
+      category: gift.categorySlug || gift.categoryLabel,
+      marketplace: gift.marketplace,
+      metadata: {
+        product_id: gift.id,
+        marketplace: gift.marketplace,
+        category: gift.categoryLabel || gift.categorySlug,
+        source_page: window.location.pathname,
+        price: gift.price,
+      },
+    });
   };
 
   const riskColor = gift.riskLevel === 'low'
@@ -82,6 +120,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
           {hasProductUrl ? (
             <a
               href={productUrl}
+              onClick={trackClick}
               target="_blank"
               rel="noopener noreferrer"
               className="premium-button inline-flex flex-1 items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold"

@@ -16,6 +16,7 @@ export const adminMenu = [
   { href: '/admin/ozon', label: 'Ozon Seller' },
   { href: '/admin/sources', label: 'Источники' },
   { href: '/admin/sync', label: 'Синхронизация' },
+  { href: '/admin/analytics', label: 'Аналитика' },
   { href: '/admin/settings', label: 'Настройки' },
   { href: '/admin/quick-add-epn', label: 'Быстро добавить ePN' },
   { href: '/admin/admitad-import', label: 'Импорт из Admitad' },

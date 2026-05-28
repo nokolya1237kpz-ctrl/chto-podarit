@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import CatalogPage from '../page';
 import { PUBLIC_CATEGORIES } from '@entities/product/lib/categoryMapper';
+import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
+import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
 export async function generateMetadata({
   params,
@@ -24,5 +26,14 @@ export default async function CategoryCatalogPage({
 }) {
   const { category } = await params;
   const resolvedSearchParams = await searchParams;
+  const products = isSupabaseConfigured() ? await getActiveProducts() : [];
+  const productsCount = products.filter((product) => product.categorySlug === category).length;
+  await trackEvent(ANALYTICS_EVENTS.categoryView, {
+    category,
+    metadata: {
+      category,
+      products_count: productsCount,
+    },
+  });
   return <CatalogPage searchParams={Promise.resolve({ ...resolvedSearchParams, category })} />;
 }

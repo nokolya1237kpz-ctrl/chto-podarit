@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { getImportJob, updateImportJob } from '@features/product-import/lib/importJobs';
 import { processImportBatch } from '@features/product-import/lib/processImportBatch';
+import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
 export async function POST(request: NextRequest) {
   const isAdmin = await verifyAdminSession();
@@ -44,6 +45,19 @@ export async function POST(request: NextRequest) {
       errorsCount: job.errorsCount + report.saveErrors + report.skippedNoTitle,
       finishedAt: status === 'completed' ? new Date().toISOString() : null,
     });
+
+    if (report.saveErrors > 0 || report.errors > 0) {
+      await trackEvent(ANALYTICS_EVENTS.importError, {
+        metadata: {
+          filename: job.filename,
+          source: job.source,
+          reason: report.debug.firstSaveError?.reason || report.reports?.[0]?.reason || 'import_error',
+          rows_total: report.parsedRows,
+          rows_failed: report.saveErrors || report.errors,
+          first_error: report.debug.firstSaveError,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

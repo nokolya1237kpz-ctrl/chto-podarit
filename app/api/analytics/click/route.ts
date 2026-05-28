@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,18 @@ export async function POST(request: NextRequest) {
         clicked_at: new Date().toISOString(),
       });
     }
+    await trackEvent(ANALYTICS_EVENTS.productClick, {
+      productId: body.productId,
+      marketplace: body.marketplace,
+      category: body.category,
+      metadata: {
+        url: body.url || '',
+        source_page: body.sourcePage || 'unknown',
+        position: body.position,
+        query: body.query,
+        price: body.price,
+      },
+    });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ success: true });

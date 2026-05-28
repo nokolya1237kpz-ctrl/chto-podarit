@@ -6,6 +6,7 @@ import { providers } from '@server/providers';
 import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormalize';
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';
+import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
 const marketplacePriority = ['search_api', 'epn', 'wildberries', 'feed', 'manual'];
 
@@ -118,6 +119,19 @@ export async function GET(request: NextRequest) {
 
     const groups = groupSimilarProducts(data);
     await Promise.all(data.slice(0, 50).map((product) => savePriceSnapshot({ ...product, query, sourcePage: 'compare' })));
+    await trackEvent(ANALYTICS_EVENTS.searchCompare, {
+      query,
+      marketplace: marketplace || null,
+      metadata: {
+        query,
+        results_count: data.length,
+        cheapest_marketplace: data[0]?.marketplace || null,
+        min_price: data.length ? Math.min(...data.map((product) => Number(product.price || 0)).filter(Boolean)) : null,
+        max_price: data.length ? Math.max(...data.map((product) => Number(product.price || 0)).filter(Boolean)) : null,
+        filters: { marketplace, sort, minPrice, maxPrice },
+        source_stats: sourceStats,
+      },
+    });
 
     return NextResponse.json({
       success: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/adminAuth';
 import { parseImportFile } from '@/lib/fileImport';
 import { processImportBatch } from '@features/product-import/lib/processImportBatch';
+import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
 export async function POST(request: NextRequest) {
   const isAdmin = await verifyAdminSession();
@@ -40,6 +41,18 @@ export async function POST(request: NextRequest) {
       mapping,
       detectedDelimiter,
     });
+
+    if (report.saveErrors > 0 || report.errors > 0) {
+      await trackEvent(ANALYTICS_EVENTS.importError, {
+        metadata: {
+          source: 'file_import',
+          reason: report.debug.firstSaveError?.reason || report.reports?.[0]?.reason || 'import_error',
+          rows_total: report.parsedRows,
+          rows_failed: report.saveErrors || report.errors,
+          first_error: report.debug.firstSaveError,
+        },
+      });
+    }
 
     const response = {
       success: report.imported > 0,

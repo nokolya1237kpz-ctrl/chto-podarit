@@ -14,6 +14,7 @@ import { CompareDiagnostics } from './CompareDiagnostics';
 import { CompareLoadingState } from './CompareLoadingState';
 import { CompareResults } from './CompareResults';
 import { CompareSearchForm } from './CompareSearchForm';
+import { useTrackEvent } from '@/src/hooks/useTrackEvent';
 
 export default function ComparePageFeature() {
   return (
@@ -31,6 +32,7 @@ function CompareContent() {
   const [message, setMessage] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>([]);
+  const trackEvent = useTrackEvent();
 
   const queryFilters = useMemo(() => ({ ...filters, query: submittedQuery }), [filters, submittedQuery]);
   const compareQuery = useQuery({
@@ -85,10 +87,23 @@ function CompareContent() {
 
   async function logClick(product: Product) {
     const url = product.affiliateUrl || product.originalUrl || '';
+    trackEvent('compare_result_click', {
+      productId: product.id,
+      query: submittedQuery,
+      category: product.categorySlug || product.categoryLabel,
+      marketplace: product.marketplace,
+      metadata: {
+        product_id: product.id,
+        marketplace: product.marketplace,
+        source_page: '/compare',
+        query: submittedQuery,
+        price: product.price,
+      },
+    });
     await fetch('/api/analytics/click', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId: product.id, marketplace: product.marketplace, url, sourcePage: '/compare' }),
+      body: JSON.stringify({ productId: product.id, marketplace: product.marketplace, url, sourcePage: '/compare', query: submittedQuery, category: product.categorySlug || product.categoryLabel, price: product.price }),
     }).catch(() => {});
   }
 
@@ -109,6 +124,19 @@ function CompareContent() {
     localStorage.setItem(key, JSON.stringify(next));
     if (key === 'favoriteProducts') setFavorites(next);
     if (key === 'priceWatchlist') setWatchlist(next);
+    trackEvent(key === 'favoriteProducts'
+      ? next.includes(id) ? 'favorite_add' : 'favorite_remove'
+      : next.includes(id) ? 'price_watch_add' : 'price_watch_remove', {
+      productId: product.id,
+      category: product.categorySlug || product.categoryLabel,
+      marketplace: product.marketplace,
+      metadata: {
+        product_id: product.id,
+        target_price: product.price,
+        marketplace: product.marketplace,
+        category: product.categoryLabel || product.categorySlug,
+      },
+    });
     localStorage.setItem(`priceSnapshot:${id}`, JSON.stringify({
       price: product.price,
       oldPrice: product.oldPrice,
