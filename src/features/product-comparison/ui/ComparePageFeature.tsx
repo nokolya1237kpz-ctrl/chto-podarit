@@ -166,7 +166,12 @@ function CompareContent() {
         ) : null}
         {normalized.hasLimitedSources ? (
           <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-            Часть источников временно ограничила запросы. Показываем доступные локальные и внешние результаты.
+            Источник временно недоступен. Показываем доступные результаты из каталога.
+          </div>
+        ) : null}
+        {normalized.hasOnlyCatalogSources ? (
+          <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-sm text-cyan-100">
+            Пока сравниваем по товарам из каталога. Добавьте больше источников или импортируйте фиды.
           </div>
         ) : null}
         <CompareDiagnostics data={data} />

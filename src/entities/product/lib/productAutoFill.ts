@@ -1,4 +1,5 @@
 import type { Product, RiskLevel } from '@entities/product/types';
+import { detectCategorySlug } from './categoryTaxonomy';
 
 export type ProductAutoFillInput = Partial<Product> & {
   category?: string;
@@ -64,9 +65,13 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
   const isGadget = includesAny(text, ['гаджет', 'наушники', 'электроника', 'технолог', 'музыка']);
   const isBook = includesAny(text, ['книга', 'литрес', 'чтение', 'саморазвитие']);
   const isAuto = includesAny(text, ['автотовары', 'fm-модулятор', 'автомобиль', 'ароматизатор', 'машина', 'авто', 'держатель']);
+  const categorySlug = detectCategorySlug(productInput);
+  const isAutoCategory = ['auto', 'auto_accessories', 'car_fragrance'].includes(categorySlug);
+  const isCosmeticsCategory = ['beauty', 'cosmetics', 'perfume'].includes(categorySlug);
+  const isElectronicsCategory = ['electronics', 'gadgets', 'gaming'].includes(categorySlug);
 
-  if (isBeauty) {
-    recipients.push('girlfriend', 'wife', 'sister', 'mom', 'teenage_girl');
+  if (isBeauty || isCosmeticsCategory) {
+    recipients.push('girlfriend', 'mom', 'friend');
     interests.push('косметика', 'макияж', 'beauty', 'уход за собой');
     occasions.push('8 марта', 'свидание');
     giftTypes.push('косметика', 'beauty', 'уход');
@@ -85,9 +90,9 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
     giftTypes.push('спорт', 'здоровье', 'аксессуар');
   }
 
-  if (isGadget) {
-    recipients.push('girlfriend', 'boyfriend', 'friend', 'colleague', 'brother', 'sister');
-    interests.push('технологии', 'музыка', 'гаджеты');
+  if (isGadget || isElectronicsCategory) {
+    recipients.push('girlfriend', 'boyfriend', 'dad', 'mom', 'friend', 'colleague');
+    interests.push('гаджеты', 'техника', 'технологии', 'музыка');
     giftTypes.push('гаджет', 'электроника', 'аксессуар');
   }
 
@@ -96,9 +101,9 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
     giftTypes.push('книга', 'саморазвитие');
   }
 
-  if (isAuto) {
+  if (isAuto || isAutoCategory) {
     recipients.push('boyfriend', 'dad', 'friend');
-    interests.push('авто', 'техника', 'автоаксессуары');
+    interests.push('авто', 'машины', 'гаджеты', 'автоаксессуары');
     giftTypes.push('автотовар', 'аксессуар для авто');
   }
 

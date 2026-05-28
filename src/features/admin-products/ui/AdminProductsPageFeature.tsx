@@ -107,6 +107,21 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function handleRecalculate() {
+    if (!confirm('Пересчитать категории и рекомендации для товаров?')) return;
+    try {
+      const res = await fetch('/api/admin/products/recalculate', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Пересчёт не выполнен');
+        return;
+      }
+      await invalidateProducts();
+    } catch {
+      setError('Ошибка пересчёта');
+    }
+  }
+
   async function handleArchive(id: string) {
     try {
       archiveMutation.mutate({ id, restore: false });
@@ -173,6 +188,9 @@ export default function AdminProductsPage() {
                 {label}
               </button>
             ))}
+            <button onClick={handleRecalculate} className="rounded-2xl border border-emerald-300/20 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20">
+              Пересчитать категории и рекомендации
+            </button>
           </div>
         </div>
 

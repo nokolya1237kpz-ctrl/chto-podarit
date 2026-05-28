@@ -18,12 +18,13 @@ export function matchProducts(products: Product[], filters: MatchFilters): Produ
     .filter((product) => product.isActive && product.status === 'active')
     .map((product) => {
       const result = scoreProductForGift(product, answers);
-      return { ...product, giftScorePreview: result.score, matchReasons: result.reasons } as Product & {
+      return { ...product, giftScorePreview: result.score, matchReasons: result.reasons, blocked: result.blocked } as Product & {
         giftScorePreview: number;
         matchReasons: string[];
+        blocked?: boolean;
       };
     })
-    .filter((product) => product.giftScorePreview > 20)
+    .filter((product) => !product.blocked && product.giftScorePreview >= 35)
     .sort((a, b) => b.giftScorePreview - a.giftScorePreview)
     .slice(0, 10);
 }

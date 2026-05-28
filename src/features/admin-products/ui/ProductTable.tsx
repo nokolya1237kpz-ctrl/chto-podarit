@@ -45,6 +45,9 @@ export function ProductTable({ products, loading, onDelete, onArchive, onRestore
       const category = getProductCategory(product);
       return <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">{category.label}</span>;
     } },
+    { key: 'recipients', header: 'Получатели', cell: (product) => <span className="text-xs text-slate-300">{(product.recipients || []).slice(0, 3).join(', ') || '—'}</span> },
+    { key: 'interests', header: 'Интересы', cell: (product) => <span className="text-xs text-slate-300">{(product.interests || []).slice(0, 3).join(', ') || '—'}</span> },
+    { key: 'giftTypes', header: 'Типы', cell: (product) => <span className="text-xs text-slate-300">{(product.giftTypes || []).slice(0, 3).join(', ') || '—'}</span> },
     { key: 'quality', header: 'Качество', cell: (product) => `${calculateQualityScore(product)}%` },
     { key: 'marketplace', header: 'Маркетплейс', cell: (product) => getMarketplaceName(product.marketplace) },
     { key: 'source', header: 'Источник', cell: (product) => <span className="text-purple-300">{translateSourceType(product.sourceType)}</span> },

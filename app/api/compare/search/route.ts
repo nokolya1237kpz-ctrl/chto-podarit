@@ -2,13 +2,61 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Product } from '@/types/product';
 import { getActiveProducts, supabaseAdmin } from '@/lib/supabase';
 import { getEpnHotGoods, mapEpnGoodToProduct } from '@/lib/epn';
-import { providers } from '@server/providers';
 import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormalize';
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
-import type { ProviderDiagnostic } from '@/lib/diagnostics/providerDiagnostics';
 import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 
-const marketplacePriority = ['search_api', 'epn', 'wildberries', 'feed', 'manual'];
+const marketplacePriority = ['local', 'sadovod', 'file_import', 'feed', 'epn', 'admitad', 'ozon', 'wildberries', 'manual'];
+const STOP_WORDS = new Set(['купить', 'цена', 'товар', 'для', 'код', 'артикул', 'новый', 'оригинал', 'на', 'и', 'в']);
+
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\biphone\b/g, 'айфон iphone')
+    .replace(/\bайфон\b/g, 'айфон iphone')
+    .replace(/\bсамсунг\b/g, 'samsung самсунг')
+    .replace(/\bсяоми\b/g, 'xiaomi сяоми')
+    .replace(/\bкод\s*\d+/gi, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokens(value: string) {
+  return normalizeSearchText(value)
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
+}
+
+function compareSearchText(product: Product) {
+  return normalizeSearchText([
+    product.title,
+    product.description,
+    product.categoryLabel,
+    product.categorySlug,
+    product.externalProductId,
+    product.marketplace,
+    product.sourceProvider,
+    product.sourceType,
+    ...(product.tags || []),
+    ...(product.interests || []),
+    ...(product.giftTypes || []),
+  ].filter(Boolean).join(' '));
+}
+
+function relevance(product: Product, query: string) {
+  if (!query.trim()) return 1;
+  const haystack = compareSearchText(product);
+  const queryTokens = tokens(query);
+  if (queryTokens.length === 0) return 1;
+  let score = 0;
+  for (const token of queryTokens) {
+    if (haystack.includes(token)) score += 1;
+  }
+  if (haystack.includes(normalizeSearchText(query))) score += 2;
+  return score / queryTokens.length;
+}
 
 function toCompareProduct(product: any, sourceProvider?: string): Product {
   return {
@@ -46,64 +94,28 @@ export async function GET(request: NextRequest) {
   const minPrice = Number(searchParams.get('minPrice') || 0);
   const maxPrice = Number(searchParams.get('maxPrice') || 0);
   const sourceStats: Record<string, { count: number; status: string; error?: string }> = {};
-  const diagnostics: ProviderDiagnostic[] = [];
+  const diagnostics: any[] = [];
 
   try {
-    const local = (await getActiveProducts(supabaseAdmin as any)).filter((product) => {
-      const text = `${product.title} ${product.description || ''} ${product.categoryLabel || ''} ${product.externalProductId || ''} ${(product.tags || []).join(' ')}`.toLowerCase();
-      return (!query || text.includes(query.toLowerCase())) && (!marketplace || product.marketplace === marketplace);
-    });
+    const local = (await getActiveProducts(supabaseAdmin as any))
+      .map((product) => ({ product, relevance: relevance(product, query) }))
+      .filter((item) => (!query || item.relevance > 0) && (!marketplace || item.product.marketplace === marketplace))
+      .sort((a, b) => b.relevance - a.relevance)
+      .map((item) => item.product);
     sourceStats.local = { count: local.length, status: 'active' };
+    sourceStats.catalog = { count: local.length, status: 'active' };
 
-    const all: Product[] = local.map((product) => toCompareProduct(product, 'manual'));
+    const all: Product[] = local.map((product) => toCompareProduct(product, product.sourceProvider || 'local'));
 
-    if (all.length < 5) {
+    if (all.length < 8) {
       try {
-        const provider: any = providers.search_api;
-        const result = provider?.searchWithDiagnostics
-          ? await provider.searchWithDiagnostics({ query, limit: 8 })
-          : { products: [], diagnostics: [] };
-        const results: Product[] = result.products || [];
-        all.push(...results.map((product) => toCompareProduct(product, 'search_api')));
-        diagnostics.push(...(result.diagnostics || []));
-        sourceStats.search_api = {
-          count: results.length,
-          status: results.length ? 'active' : 'requires_api',
-          error: results.length ? undefined : 'Настройте SERPAPI_KEY, GOOGLE_API_KEY/GOOGLE_CSE_ID или BING_SEARCH_API_KEY',
-        };
-      } catch (error) {
-        sourceStats.search_api = { count: 0, status: 'error', error: error instanceof Error ? error.message : String(error) };
-        diagnostics.push({ provider: 'search_api', query, stage: 'fetch', status: 'error', error: sourceStats.search_api.error });
+        const goods = await getEpnHotGoods({ q: query, limit: 8 });
+        const epnProducts = goods.map((good) => toCompareProduct(mapEpnGoodToProduct(good), 'epn'));
+        all.push(...epnProducts);
+        sourceStats.epn = { count: epnProducts.length, status: epnProducts.length ? 'active' : 'optional' };
+      } catch {
+        sourceStats.epn = { count: 0, status: 'limited', error: 'Источник временно недоступен' };
       }
-    }
-
-    if (all.length < 5) {
-      try {
-        const wbProvider: any = providers.wildberries;
-        const wbResult = wbProvider.searchWithDiagnostics
-          ? await wbProvider.searchWithDiagnostics({ query, limit: 10 })
-          : { products: await wbProvider.searchProducts({ query, limit: 10 }), diagnostics: [] };
-        all.push(...wbResult.products.map((product: Product) => toCompareProduct(product, 'wildberries')));
-        diagnostics.push(...wbResult.diagnostics);
-        const wbLimited = wbResult.diagnostics?.some((item: ProviderDiagnostic) => item.httpStatus === 403 || item.httpStatus === 429 || String(item.error || '').includes('limited'));
-        sourceStats.wildberries = {
-          count: wbResult.products.length,
-          status: wbResult.products.length ? 'active' : wbLimited ? 'limited' : 'optional',
-          error: wbResult.products.length ? undefined : wbLimited ? 'Источник временно ограничил публичный запрос' : 'WB optional source did not return products',
-        };
-      } catch (error) {
-        sourceStats.wildberries = { count: 0, status: 'limited', error: error instanceof Error ? error.message : String(error) };
-      }
-    }
-
-    try {
-      const goods = await getEpnHotGoods({ q: query, limit: 10 });
-      const epnProducts = goods.map((good) => toCompareProduct(mapEpnGoodToProduct(good), 'epn'));
-      all.push(...epnProducts);
-      sourceStats.epn = { count: epnProducts.length, status: 'active' };
-    } catch (error) {
-      sourceStats.epn = { count: 0, status: (error as any)?.status === 429 ? 'limited' : 'optional', error: error instanceof Error ? error.message : String(error) };
-      diagnostics.push({ provider: 'epn', query, stage: 'fetch', status: 'warning', error: sourceStats.epn.error, details: (error as any)?.details });
     }
 
     let data = all
@@ -113,7 +125,12 @@ export async function GET(request: NextRequest) {
       .filter((product) => !maxPrice || product.price <= maxPrice);
 
     data = data.sort((a, b) => {
-      if (sort === 'relevance') return marketplacePriority.indexOf(String(a.sourceProvider)) - marketplacePriority.indexOf(String(b.sourceProvider));
+      if (sort === 'relevance') {
+        const rel = relevance(b, query) - relevance(a, query);
+        if (rel !== 0) return rel;
+        return marketplacePriority.indexOf(String(a.sourceProvider)) - marketplacePriority.indexOf(String(b.sourceProvider));
+      }
+      if (sort === 'price_desc') return (b.price || 0) - (a.price || 0);
       return (a.price || Number.MAX_SAFE_INTEGER) - (b.price || Number.MAX_SAFE_INTEGER);
     });
 

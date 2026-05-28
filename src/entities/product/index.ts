@@ -4,6 +4,7 @@ export * from './lib/mapProduct';
 export * from './lib/calculateQualityScore';
 export * from './lib/calculateTrendScore';
 export * from './lib/categoryMapper';
+export * from './lib/categoryTaxonomy';
 export * from './lib/detectProductCategory';
 export * from './lib/mapImportedProduct';
 export * from './lib/normalizeProduct';
