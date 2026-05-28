@@ -39,6 +39,7 @@ async function fetchProviderDiagnostics(query: string) {
   return data as {
     diagnostics?: Array<{ provider?: string; stage?: string; status?: string }>;
     samples?: Record<string, Array<{ title?: string; price?: number | string; marketplace?: string }>>;
+    providerStatuses?: Record<string, any>;
   };
 }
 
@@ -84,6 +85,7 @@ export default function PriceSourcesPageFeature() {
             <ProviderCard
               key={source.id}
               source={source}
+              statusInfo={diagnosticsQuery.data?.providerStatuses?.[source.id]}
               testing={activeSourceId === source.id && diagnosticsQuery.isFetching}
               diagnostics={diagnostics.filter((item) => item.provider === source.id)}
               samples={diagnosticsQuery.data?.samples?.[source.id] || []}
@@ -105,6 +107,7 @@ export default function PriceSourcesPageFeature() {
 function buildMessage(sourceId: string, diagnostics: Array<{ provider?: string; stage?: string; status?: string }>, samples?: Record<string, unknown[]>) {
   const latest = diagnostics.filter((item) => item.provider === sourceId).at(-1);
   const found = samples?.[sourceId]?.length || 0;
+  if (found === 0) return `${sourceId}: нет товаров по запросу. Это не значит, что источник работает для поиска. Этап ${latest?.stage || '—'}, статус ${latest?.status || 'нет данных'}`;
   return `${sourceId}: найдено ${found}, этап ${latest?.stage || '—'}, статус ${latest?.status || 'нет данных'}`;
 }
 

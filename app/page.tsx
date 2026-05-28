@@ -9,6 +9,7 @@ import { getActiveProducts, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types/product';
 import { enrichTrendProduct, getPopularClickCounts, shuffleProducts } from '@/lib/trends';
 import { PUBLIC_CATEGORIES, getProductCategory } from '@entities/product/lib/categoryMapper';
+import { dedupeProducts } from '@entities/product/lib/dedupeProducts';
 import { withTimeout } from '@lib/utils/timeout';
 
 export default async function Home() {
@@ -16,6 +17,7 @@ export default async function Home() {
   if (isSupabaseConfigured()) {
     products = await withTimeout(getActiveProducts(), 4000, []);
   }
+  products = dedupeProducts(products);
   const clickCounts = await withTimeout(getPopularClickCounts(), 1500, new Map());
   products = products.map((product) => enrichTrendProduct(product, {
     localClicks: clickCounts.get(product.id) || 0,

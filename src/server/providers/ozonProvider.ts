@@ -2,11 +2,46 @@ import type { ProductProvider, ProductSearchFilters } from './types';
 import type { Product } from '@entities/product/types';
 import { normalizeAffiliateProduct } from '@/lib/affiliate';
 import { makeSearchUrl, parseSearchPageAsSingleProduct } from './marketplaceSearch';
+import { diagnostic, type ProviderDiagnostic, type ProviderSearchResult } from '@/lib/diagnostics/providerDiagnostics';
 
 export class OzonProvider implements ProductProvider {
   id = 'ozon';
   name = 'Ozon';
   searchUrlTemplate = 'https://www.ozon.ru/search/?text={query}';
+
+  async searchWithDiagnostics(filters: ProductSearchFilters): Promise<ProviderSearchResult<Product>> {
+    const query = filters.query || '';
+    const url = makeSearchUrl(this.searchUrlTemplate, query);
+    const diagnostics: ProviderDiagnostic[] = [
+      diagnostic({ provider: this.id, query, url, stage: 'build_url', status: 'success' }),
+    ];
+
+    try {
+      const products = await this.searchProducts(filters);
+      diagnostics.push(diagnostic({
+        provider: this.id,
+        query,
+        url,
+        stage: 'normalize',
+        status: products.length ? 'success' : 'warning',
+        normalized: products.length,
+        error: products.length ? undefined : 'Ozon часто ограничивает публичный поиск. Используйте импорт URL/фиды.',
+        details: { reason: products.length ? 'searchable' : 'empty_or_limited' },
+      }));
+      return { products, diagnostics };
+    } catch (error) {
+      diagnostics.push(diagnostic({
+        provider: this.id,
+        query,
+        url,
+        stage: 'fetch',
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        details: { reason: 'blocked_or_failed' },
+      }));
+      return { products: [], diagnostics };
+    }
+  }
 
   async searchProducts(filters: ProductSearchFilters): Promise<Product[]> {
     const clientId = process.env.OZON_CLIENT_ID;

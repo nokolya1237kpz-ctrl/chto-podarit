@@ -16,6 +16,18 @@ export type PriceSourceConfig = {
 
 type ProviderCardProps = {
   source: PriceSourceConfig;
+  statusInfo?: {
+    configured?: boolean;
+    reachable?: boolean;
+    searchable?: boolean;
+    status?: string;
+    normalizedItemsCount?: number;
+    rawItemsCount?: number;
+    httpStatus?: number | null;
+    lastError?: string | null;
+    lastCheckedAt?: string;
+    reason?: string;
+  };
   diagnostics: unknown[];
   samples?: Array<{ title?: string; price?: number | string; marketplace?: string }>;
   testing?: boolean;
@@ -23,14 +35,15 @@ type ProviderCardProps = {
   onTest: () => void;
 };
 
-export function ProviderCard({ source, diagnostics, samples, testing, onToggle, onTest }: ProviderCardProps) {
+export function ProviderCard({ source, statusInfo, diagnostics, samples, testing, onToggle, onTest }: ProviderCardProps) {
+  const effectiveStatus = statusInfo?.status || (source.enabled ? 'configured' : 'disabled');
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-semibold">{source.name}</h2>
-            <ProviderHealthBadge status={source.status} enabled={source.enabled} />
+            <ProviderHealthBadge status={effectiveStatus} enabled={source.enabled} />
           </div>
           <p className="mt-2 break-words text-sm text-slate-400">{source.allowedDomains}</p>
         </div>
@@ -45,6 +58,12 @@ export function ProviderCard({ source, diagnostics, samples, testing, onToggle, 
       </div>
 
       <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2">
+        <StatusLine label="Configured" value={statusInfo?.configured ?? source.enabled} />
+        <StatusLine label="Reachable" value={statusInfo?.reachable} />
+        <StatusLine label="Searchable" value={statusInfo?.searchable} />
+        <Field label="Найдено за тест" value={String(statusInfo?.normalizedItemsCount ?? samples?.length ?? 0)} />
+        {statusInfo?.lastError ? <Field label="Последняя ошибка" value={statusInfo.lastError} /> : null}
+        {statusInfo?.lastCheckedAt ? <Field label="Последняя проверка" value={new Date(statusInfo.lastCheckedAt).toLocaleString('ru-RU')} /> : null}
         <Field label="Разрешённые домены" value={source.allowedDomains} />
         <Field label="Шаблон поиска" value={source.searchUrlTemplate} />
         <Field label="Правила чтения" value="metadata/json/public endpoint" />
@@ -53,7 +72,18 @@ export function ProviderCard({ source, diagnostics, samples, testing, onToggle, 
         <Field label="Кэш" value={`${source.cacheTtlMinutes} мин.`} />
       </div>
 
-      <ProviderDiagnosticsPanel diagnostics={diagnostics} samples={samples} />
+      <ProviderDiagnosticsPanel diagnostics={diagnostics} samples={samples} statusInfo={statusInfo} />
+    </div>
+  );
+}
+
+function StatusLine({ label, value }: { label: string; value?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3">
+      <span className="text-xs uppercase tracking-[0.2em] text-slate-500">{label}</span>
+      <div className={`mt-2 text-sm font-semibold ${value ? 'text-emerald-300' : value === false ? 'text-amber-300' : 'text-slate-400'}`}>
+        {value ? 'Да' : value === false ? 'Нет' : 'Не проверено'}
+      </div>
     </div>
   );
 }

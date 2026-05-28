@@ -25,6 +25,7 @@ export default function AdminProductsPage() {
   const [sourceType, setSourceType] = useState('');
   const [status, setStatus] = useState('');
   const [isActive, setIsActive] = useState('');
+  const [duplicateSummary, setDuplicateSummary] = useState('');
   const filters: AdminProductFilters = useMemo(() => ({ search, marketplace, sourceType, status, isActive }), [search, marketplace, sourceType, status, isActive]);
   const queryKey = useMemo(() => ['admin-products', filters] as const, [filters]);
 
@@ -122,6 +123,40 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function handleFindDuplicates() {
+    try {
+      const res = await fetch('/api/admin/products/dedupe/scan', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Не удалось найти дубли');
+        return;
+      }
+      setDuplicateSummary(`Найдено групп дублей: ${data.count}. Первые группы: ${JSON.stringify((data.groups || []).slice(0, 3), null, 2)}`);
+    } catch {
+      setError('Ошибка поиска дублей');
+    }
+  }
+
+  async function handleArchiveDuplicates() {
+    if (!confirm('Оставить лучший товар в каждой группе, остальные отправить в архив?')) return;
+    try {
+      const res = await fetch('/api/admin/products/dedupe/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'archive' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Не удалось обработать дубли');
+        return;
+      }
+      setDuplicateSummary(`Отправлено в архив дублей: ${data.affected}`);
+      await invalidateProducts();
+    } catch {
+      setError('Ошибка обработки дублей');
+    }
+  }
+
   async function handleArchive(id: string) {
     try {
       archiveMutation.mutate({ id, restore: false });
@@ -191,7 +226,16 @@ export default function AdminProductsPage() {
             <button onClick={handleRecalculate} className="rounded-2xl border border-emerald-300/20 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20">
               Пересчитать категории и рекомендации
             </button>
+            <button onClick={handleFindDuplicates} className="rounded-2xl border border-cyan-300/20 bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20">
+              Найти дубли
+            </button>
+            <button onClick={handleArchiveDuplicates} className="rounded-2xl border border-amber-300/20 bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/20">
+              Архивировать дубли
+            </button>
           </div>
+          {duplicateSummary ? (
+            <pre className="mt-3 max-h-60 overflow-auto whitespace-pre-wrap rounded-2xl bg-slate-950 p-3 text-xs text-slate-300">{duplicateSummary}</pre>
+          ) : null}
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6">

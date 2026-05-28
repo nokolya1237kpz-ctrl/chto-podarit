@@ -7,6 +7,7 @@ import GiftCard from '@/components/GiftCard';
 import ResultsTracker from '@/components/ResultsTracker';
 import type { Product } from '@/types/product';
 import { withTimeout } from '@lib/utils/timeout';
+import { dedupeProducts } from '@entities/product/lib/dedupeProducts';
 
 function getSearchParam(value: string | string[] | undefined) {
   if (!value) return '';
@@ -24,6 +25,7 @@ export default async function ResultsPage({
   if (isSupabaseConfigured()) {
     products = await withTimeout(getActiveProducts(), 4000, []);
   }
+  products = dedupeProducts(products);
 
   // Parse search params
   const recipient = getSearchParam(resolvedSearchParams.recipient);

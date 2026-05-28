@@ -6,6 +6,7 @@ import { groupSimilarProducts, normalizeMarketplace } from '@/lib/productNormali
 import { savePriceSnapshot } from '@/lib/priceSnapshots';
 import { ANALYTICS_EVENTS, trackEvent } from '@server/analytics';
 import { withTimeout } from '@lib/utils/timeout';
+import { dedupeProducts } from '@entities/product/lib/dedupeProducts';
 
 const marketplacePriority = ['local', 'sadovod', 'file_import', 'feed', 'epn', 'admitad', 'ozon', 'wildberries', 'manual'];
 const STOP_WORDS = new Set(['купить', 'цена', 'товар', 'для', 'код', 'артикул', 'новый', 'оригинал', 'на', 'и', 'в']);
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
   const diagnostics: any[] = [];
 
   try {
-    const localProducts = await withTimeout(getActiveProducts(supabaseAdmin as any), 4000, []);
+    const localProducts = dedupeProducts(await withTimeout(getActiveProducts(supabaseAdmin as any), 4000, []));
     const local = localProducts
       .map((product) => ({ product, relevance: relevance(product, query) }))
       .filter((item) => (!query || item.relevance > 0) && (!marketplace || item.product.marketplace === marketplace))
@@ -143,12 +144,16 @@ export async function GET(request: NextRequest) {
       marketplace: marketplace || null,
       metadata: {
         query,
+        local_results_count: local.length,
+        provider_results_count: Math.max(0, data.length - local.length),
+        total_results_count: data.length,
         results_count: data.length,
         cheapest_marketplace: data[0]?.marketplace || null,
         min_price: data.length ? Math.min(...data.map((product) => Number(product.price || 0)).filter(Boolean)) : null,
         max_price: data.length ? Math.max(...data.map((product) => Number(product.price || 0)).filter(Boolean)) : null,
         filters: { marketplace, sort, minPrice, maxPrice },
         source_stats: sourceStats,
+        providers_status: sourceStats,
       },
     });
 
