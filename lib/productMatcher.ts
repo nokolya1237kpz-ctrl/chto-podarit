@@ -1,5 +1,5 @@
 import type { Product } from '@/types/product';
-import { scoreProductForGift, type GiftQuizAnswers } from '@features/gift-quiz/lib/giftScoring';
+import { getGiftRecommendations, type GiftQuizAnswers } from '@features/gift-quiz/lib/recommendationEngine';
 
 export interface MatchFilters {
   recipient?: string;
@@ -14,19 +14,7 @@ export interface MatchFilters {
  */
 export function matchProducts(products: Product[], filters: MatchFilters): Product[] {
   const answers: GiftQuizAnswers = filters;
-  return products
-    .filter((product) => product.isActive && product.status === 'active')
-    .map((product) => {
-      const result = scoreProductForGift(product, answers);
-      return { ...product, giftScorePreview: result.score, matchReasons: result.reasons, blocked: result.blocked } as Product & {
-        giftScorePreview: number;
-        matchReasons: string[];
-        blocked?: boolean;
-      };
-    })
-    .filter((product) => !product.blocked && product.giftScorePreview >= 35)
-    .sort((a, b) => b.giftScorePreview - a.giftScorePreview)
-    .slice(0, 10);
+  return getGiftRecommendations(products, answers).slice(0, 10);
 }
 
 /**

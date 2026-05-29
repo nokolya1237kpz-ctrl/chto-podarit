@@ -59,15 +59,15 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
   const occasions = ['день рождения', 'новый год', 'праздник'];
   const giftTypes: string[] = [];
 
-  const isBeauty = includesAny(text, ['косметика', 'помада', 'уход', 'beauty', 'украшения', 'сумка', 'макияж']);
+  const isBeauty = includesAny(text, ['косметика', 'помада', 'уход', 'beauty', 'украшения', 'сумка', 'сумочка', 'макияж']);
   const isKitchen = includesAny(text, ['кухня', 'мультиварка', 'дом', 'техника для кухни', 'готовка', 'кулинар']);
   const isSport = includesAny(text, ['спорт', 'фитнес', 'валик', 'тренажер', 'йога']);
   const isGadget = includesAny(text, ['гаджет', 'наушники', 'электроника', 'технолог', 'музыка']);
   const isBook = includesAny(text, ['книга', 'литрес', 'чтение', 'саморазвитие']);
   const isAuto = includesAny(text, ['автотовары', 'fm-модулятор', 'автомобиль', 'ароматизатор', 'машина', 'авто', 'держатель']);
   const categorySlug = detectCategorySlug(productInput);
-  const isAutoCategory = ['auto', 'auto_accessories', 'car_fragrance'].includes(categorySlug);
-  const isCosmeticsCategory = ['beauty', 'cosmetics', 'perfume'].includes(categorySlug);
+  const isAutoCategory = ['auto', 'auto_parts', 'auto_accessories', 'car_fragrance'].includes(categorySlug);
+  const isCosmeticsCategory = ['beauty', 'cosmetics', 'perfume', 'women_bags', 'jewelry', 'accessories_female'].includes(categorySlug);
   const isElectronicsCategory = ['electronics', 'gadgets', 'gaming'].includes(categorySlug);
 
   if (isBeauty || isCosmeticsCategory) {
@@ -104,7 +104,7 @@ export function autoFillProductFields(productInput: ProductAutoFillInput): Produ
   if (isAuto || isAutoCategory) {
     recipients.push('boyfriend', 'dad', 'friend');
     interests.push('авто', 'машины', 'гаджеты', 'автоаксессуары');
-    giftTypes.push('автотовар', 'аксессуар для авто');
+    giftTypes.push('автоаксессуар', 'аксессуар для авто');
   }
 
   if (recipients.length === 0) {

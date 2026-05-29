@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Product } from '@/types/product';
-import { isSupabaseConfigured, searchProducts } from '@/lib/supabase';
+import { getActiveProducts, isSupabaseConfigured, searchProducts, supabaseAdmin } from '@/lib/supabase';
+import { matchProducts } from '@/lib/productMatcher';
 
 function parseList(value: string | null): string[] {
   if (!value) return [];
@@ -25,7 +26,19 @@ export async function GET(request: NextRequest) {
 
     let products: Product[] = [];
     if (isSupabaseConfigured()) {
-      products = await searchProducts(filters);
+      const hasGiftFilters = Boolean(filters.recipient || filters.budget || filters.interests.length || filters.occasions.length || filters.giftTypes.length);
+      if (hasGiftFilters) {
+        const baseProducts = filters.query ? await searchProducts(filters) : await getActiveProducts(supabaseAdmin as any);
+        products = matchProducts(baseProducts, {
+          recipient: filters.recipient,
+          budget: filters.budget,
+          interests: filters.interests,
+          occasions: filters.occasions,
+          giftTypes: filters.giftTypes,
+        });
+      } else {
+        products = await searchProducts(filters);
+      }
     }
 
     return NextResponse.json({ success: true, data: products, count: products.length });

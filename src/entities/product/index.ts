@@ -5,6 +5,7 @@ export * from './lib/calculateQualityScore';
 export * from './lib/calculateTrendScore';
 export * from './lib/categoryMapper';
 export * from './lib/categoryTaxonomy';
+export * from './lib/detectProductGender';
 export * from './lib/dedupeProducts';
 export * from './lib/detectProductCategory';
 export * from './lib/mapImportedProduct';

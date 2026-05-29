@@ -5,12 +5,12 @@ export type RecipientRule = {
 
 export const RECIPIENT_RULES: Record<string, RecipientRule> = {
   girlfriend: {
-    allow: ['beauty', 'cosmetics', 'perfume', 'jewelry', 'accessories', 'fashion', 'women_fashion', 'flowers', 'home', 'decor', 'books', 'creative', 'gadgets', 'electronics', 'sweets', 'gift_sets'],
-    block: ['auto', 'auto_accessories', 'car_fragrance', 'auto_parts', 'tools', 'fishing', 'hunting', 'industrial', 'car_chemistry', 'male_grooming', 'men_fashion'],
+    allow: ['beauty', 'cosmetics', 'perfume', 'jewelry', 'women_fashion', 'women_bags', 'accessories_female', 'flowers', 'home', 'decor', 'books', 'creative', 'gadgets', 'electronics', 'sweets', 'gift_sets'],
+    block: ['men_fashion', 'male_accessories', 'accessories_male', 'men_belts', 'belts_male', 'auto', 'auto_accessories', 'auto_parts', 'car_fragrance', 'tools', 'fishing', 'hunting', 'industrial', 'car_chemistry', 'male_grooming', 'baby', 'kids', 'adult', 'alcohol', 'tobacco'],
   },
   boyfriend: {
     allow: ['electronics', 'gadgets', 'gaming', 'auto', 'auto_accessories', 'sport', 'tools', 'accessories', 'men_fashion', 'fashion', 'books', 'hobby'],
-    block: ['female_cosmetics', 'cosmetics', 'women_underwear', 'women_fashion', 'flowers_only', 'pregnancy', 'baby_care'],
+    block: ['female_cosmetics', 'cosmetics', 'beauty', 'women_underwear', 'women_fashion', 'women_bags', 'accessories_female', 'flowers_only', 'pregnancy', 'baby_care'],
   },
   mom: {
     allow: ['home', 'kitchen', 'beauty', 'cosmetics', 'perfume', 'health', 'books', 'flowers', 'decor', 'textile', 'hobby', 'gift_sets'],
@@ -18,7 +18,7 @@ export const RECIPIENT_RULES: Record<string, RecipientRule> = {
   },
   dad: {
     allow: ['tools', 'auto', 'auto_accessories', 'electronics', 'gadgets', 'sport', 'fishing', 'books', 'home', 'garden', 'hobby'],
-    block: ['female_cosmetics', 'cosmetics', 'women_fashion', 'jewelry', 'flowers_only'],
+    block: ['female_cosmetics', 'cosmetics', 'beauty', 'women_fashion', 'women_bags', 'accessories_female', 'jewelry', 'flowers_only'],
   },
   child: {
     allow: ['toys', 'kids', 'books', 'creative', 'sport', 'school', 'kids_gadgets', 'gadgets'],

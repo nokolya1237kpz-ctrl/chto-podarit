@@ -46,10 +46,6 @@ export default async function ResultsPage({
   let matched = hasFilters ? matchProducts(products, filters) : products;
   const noMatchFallback = hasFilters && matched.length === 0;
 
-  if (noMatchFallback) {
-    matched = products.slice(0, 10);
-  }
-
   return (
     <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.16),transparent_0%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.1),transparent_25%),linear-gradient(180deg,#05060f,#090d1a)] text-white">
       <Header />
@@ -72,7 +68,7 @@ export default async function ResultsPage({
 
             <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-400">
               {noMatchFallback
-                ? 'Подходящих товаров мало — попробуйте изменить бюджет или интересы.'
+                ? 'Подходящих товаров мало — попробуйте расширить бюджет или выбрать больше интересов.'
                 : hasFilters
                 ? 'Мы подобрали товары, соответствующие выбранным фильтрам.'
                 : 'Здесь отображаются все активные товары из базы данных.'}
