@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { event } from '@/lib/metrics';
+import { trackAnalyticsEvent } from '@/src/hooks/useTrackEvent';
 
 const recipients = ['Девушка','Парню','Маме','Папе','Другу','Коллеге','Ребёнку'];
 const budgets = ['До 1000 ₽','1000–3000 ₽','3000–7000 ₽','7000–15000 ₽','15000 ₽+'];
@@ -34,7 +35,10 @@ export default function VkQuiz() {
     if (!selectedValue) return;
     const params = new URLSearchParams();
     Object.entries(answers).forEach(([k,v]: any) => { if (v) params.set(k, v); });
-    try { event('quiz_submit', { answers }); } catch {}
+    try {
+      event('quiz_submit', { answers });
+      trackAnalyticsEvent('gift_quiz_complete', { metadata: { ...answers, source_page: '/vk' } });
+    } catch {}
     router.push('/vk/results?' + params.toString());
   };
 

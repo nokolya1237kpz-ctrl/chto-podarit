@@ -58,9 +58,9 @@ export function ProviderCard({ source, statusInfo, diagnostics, samples, testing
       </div>
 
       <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2">
-        <StatusLine label="Configured" value={statusInfo?.configured ?? source.enabled} />
-        <StatusLine label="Reachable" value={statusInfo?.reachable} />
-        <StatusLine label="Searchable" value={statusInfo?.searchable} />
+        <StatusLine label="Настроен" value={statusInfo?.configured ?? source.enabled} />
+        <StatusLine label="Доступен" value={statusInfo?.reachable} />
+        <StatusLine label="Возвращает товары" value={statusInfo?.searchable} />
         <Field label="Найдено за тест" value={String(statusInfo?.normalizedItemsCount ?? samples?.length ?? 0)} />
         {statusInfo?.lastError ? <Field label="Последняя ошибка" value={statusInfo.lastError} /> : null}
         {statusInfo?.lastCheckedAt ? <Field label="Последняя проверка" value={new Date(statusInfo.lastCheckedAt).toLocaleString('ru-RU')} /> : null}

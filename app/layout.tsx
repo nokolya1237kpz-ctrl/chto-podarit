@@ -14,6 +14,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://xn----8sba3adk3a1a.xn--p1ai';
+  const seoSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Organization', name: 'ЧтоПодарить', url: baseUrl },
+      { '@type': 'WebSite', name: 'ЧтоПодарить', url: baseUrl, potentialAction: { '@type': 'SearchAction', target: `${baseUrl}/compare?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
+    ],
+  };
   return (
     <html lang="ru" className="h-full antialiased">
       <head>
@@ -35,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(seoSchema) }} />
         <Script
           id="yandex-metrika"
           strategy="lazyOnload"

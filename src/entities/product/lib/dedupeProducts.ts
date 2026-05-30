@@ -5,8 +5,8 @@ export function normalizeProductTitle(title?: string) {
   return String(title || '')
     .toLowerCase()
     .replace(/ё/g, 'е')
-    .replace(/\bкод\s*\d+\b/gi, ' ')
-    .replace(/\bарт(?:икул)?\.?\s*\d+\b/gi, ' ')
+    .replace(/(?:^|\s)код\s*\d+(?=\s|$)/gi, ' ')
+    .replace(/(?:^|\s)арт(?:икул)?\.?\s*\d+(?=\s|$)/gi, ' ')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();

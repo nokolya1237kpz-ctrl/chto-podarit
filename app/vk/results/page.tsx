@@ -4,6 +4,8 @@ import SafeProductImage from '@/components/SafeProductImage';
 import { matchProducts } from '@/lib/productMatcher';
 import { withTimeout } from '@lib/utils/timeout';
 import { dedupeProducts } from '@entities/product/lib/dedupeProducts';
+import VkResultActions from '@/components/VkResultActions';
+import Link from 'next/link';
 
 function getParam(params: Record<string, string | string[] | undefined>, key: string) {
   const value = params[key];
@@ -34,7 +36,12 @@ export default async function VkResults({ searchParams }: { searchParams: any })
   return (
     <div className="vk-root">
       <main style={{ maxWidth: 440, margin: '0 auto', padding: 8 }}>
-        <h2 className="text-xl font-semibold text-white mb-4">Идеи подарков</h2>
+        <h1 className="text-2xl font-bold text-white">Мы нашли идеи подарков</h1>
+        <p className="mb-4 mt-2 text-sm text-slate-300">Подходящих товаров: {products.length}</p>
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <Link href="/vk" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-white/6 px-3 py-3 text-center text-sm font-semibold text-slate-100">Изменить ответы</Link>
+          <Link href="/vk" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-purple-300/20 bg-purple-500/10 px-3 py-3 text-center text-sm font-semibold text-purple-100">Начать заново</Link>
+        </div>
         {hasFilters && products.length === 0 ? (
           <div className="vk-result-card p-4 text-center text-slate-200">
             <div className="font-semibold text-white">Подходящих товаров мало</div>
@@ -42,7 +49,7 @@ export default async function VkResults({ searchParams }: { searchParams: any })
           </div>
         ) : null}
         <div className="space-y-4">
-          {products.map((p) => (
+          {products.map((p, index) => (
             <div key={p.id} className="vk-result-card p-3">
               <div className="rounded-lg overflow-hidden mb-3">
                 <SafeProductImage imageUrl={p.imageUrl} alt={p.title} wrapperClassName="h-40 w-full bg-white" className="h-full w-full object-contain" />
@@ -56,16 +63,16 @@ export default async function VkResults({ searchParams }: { searchParams: any })
                   ))}
                 </div>
               ) : null}
-              <div className="flex gap-2">
-                <a
-                  href={p.affiliateUrl || p.originalUrl || '#'}
-                  target={p.affiliateUrl || p.originalUrl ? '_blank' : undefined}
-                  rel={p.affiliateUrl || p.originalUrl ? 'noopener noreferrer' : undefined}
-                  className="flex-1 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#ec4899] px-4 py-2 text-sm font-semibold text-white"
-                >
-                  Посмотреть товар
-                </a>
-              </div>
+              <VkResultActions
+                productId={p.id}
+                title={p.title}
+                marketplace={p.marketplace}
+                category={p.categorySlug || p.categoryLabel}
+                price={p.price}
+                url={p.affiliateUrl || p.originalUrl || undefined}
+                resultCount={products.length}
+                viewTracker={index === 0}
+              />
             </div>
           ))}
         </div>

@@ -13,6 +13,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
   const hasProductUrl = Boolean(productUrl);
   const discountPercent = gift.oldPrice && gift.price ? Math.max(0, Math.round(((gift.oldPrice - gift.price) / gift.oldPrice) * 100)) : 0;
   const riskLabel = gift.riskLevel === 'low' ? 'низкий риск' : gift.riskLevel === 'medium' ? 'средний риск' : 'высокий риск';
+  const description = String(gift.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
   React.useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('favoriteProducts') || '[]') as string[];
@@ -32,7 +33,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${gift.title} — ${gift.description || ''}`);
+      await navigator.clipboard.writeText(`${gift.title} — ${description}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -93,7 +94,7 @@ export default function GiftCard({ gift }: { gift: Product }) {
           <p className="inline-flex rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100">{gift.marketplace || 'Маркетплейс'}</p>
           {gift.categoryLabel ? <p className="ml-2 inline-flex rounded-full border border-purple-300/15 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-100">{gift.categoryLabel}</p> : null}
           <h3 className="line-clamp-2 text-2xl font-semibold text-white">{gift.title || 'Товар без названия'}</h3>
-          <p className="line-clamp-2 text-sm leading-6 text-slate-400">{gift.description || 'Описание появится после заполнения.'}</p>
+          <p className="line-clamp-2 text-sm leading-6 text-slate-400">{description || 'Описание появится после заполнения.'}</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">

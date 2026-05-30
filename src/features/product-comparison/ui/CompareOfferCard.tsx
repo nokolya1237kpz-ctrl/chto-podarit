@@ -19,6 +19,7 @@ function productStorageId(product: Product) {
 export function CompareOfferCard({ product, index, favorites, watchlist, onImport, onLogClick, onToggleStored, getPriceNote }: CompareOfferCardProps) {
   const url = product.affiliateUrl || product.originalUrl || '#';
   const id = productStorageId(product);
+  const description = String(product.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
   return (
     <article className="grid min-w-0 gap-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-300/25 md:grid-cols-[140px_minmax(0,1fr)_auto]">
@@ -34,7 +35,7 @@ export function CompareOfferCard({ product, index, favorites, watchlist, onImpor
           <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">★ {product.wowRating || 7}/10</span>
         </div>
         <h3 className="mt-3 text-lg font-semibold">{product.title}</h3>
-        <p className="mt-2 line-clamp-2 text-sm text-slate-400">{product.description || 'Описание появится после импорта.'}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-slate-400">{description || 'Описание появится после импорта.'}</p>
       </div>
       <div className="flex flex-col justify-center gap-3 md:min-w-48 md:items-end">
         <div className="text-2xl font-bold">{Math.round(product.price || 0).toLocaleString('ru-RU')} ₽</div>

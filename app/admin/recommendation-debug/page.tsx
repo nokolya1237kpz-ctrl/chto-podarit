@@ -51,6 +51,11 @@ export default function RecommendationDebugPage() {
         </div>
 
         {result ? (
+          <>
+          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 text-sm text-slate-300">
+            <span className="font-semibold text-white">{result.recommendationEngineVersion}</span>
+            {' '}• источник: {result.source} • проверено: {result.total} • разрешено: {result.allowedCount} • заблокировано: {result.blockedCount}
+          </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-3xl border border-emerald-300/15 bg-emerald-500/10 p-5">
               <h2 className="font-semibold text-white">Топ выдачи</h2>
@@ -80,6 +85,7 @@ export default function RecommendationDebugPage() {
               </div>
             </section>
           </div>
+          </>
         ) : null}
       </div>
     </AdminShell>

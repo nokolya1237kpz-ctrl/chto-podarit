@@ -128,8 +128,8 @@ export function scoreProductForGift(product: Product, answers: GiftQuizAnswers, 
   }
 
   if (rule) {
-    const allowed = rule.allow.some((value) => categoryMatches(categorySlug, value) || text.includes(value));
-    const blockedByRule = rule.block.some((value) => categoryMatches(categorySlug, value) || text.includes(value));
+    const allowed = rule.allow.some((value) => categoryMatches(categorySlug, value));
+    const blockedByRule = rule.block.some((value) => categoryMatches(categorySlug, value));
     const allowedException =
       (['auto', 'auto_accessories', 'car_fragrance'].includes(categorySlug) && hasAutoInterest) ||
       (['beauty', 'cosmetics', 'perfume'].includes(categorySlug) && hasBeautyInterest);
@@ -142,7 +142,7 @@ export function scoreProductForGift(product: Product, answers: GiftQuizAnswers, 
       score += 28;
       reasons.push(reasonForRecipient(recipient));
     } else {
-      score -= 18;
+      score -= 30;
       penalties.push('Категория не входит в типичные интересы получателя');
     }
   }
@@ -177,6 +177,7 @@ export function scoreProductForGift(product: Product, answers: GiftQuizAnswers, 
 
   for (const occasion of answers.occasions || []) {
     const normalized = occasion.toLowerCase();
+    if (/8\s*мар|восьм/i.test(normalized)) continue;
     if (product.occasions?.some((item) => item.toLowerCase().includes(normalized)) || text.includes(normalized)) {
       score += 10;
       reasons.push(`Подходит к поводу: ${occasion}`);

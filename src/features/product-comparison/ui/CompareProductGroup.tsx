@@ -20,10 +20,11 @@ export function CompareProductGroup(props: CompareProductGroupProps) {
         <span className="text-sm text-slate-400">{props.group.items.length} предложений</span>
       </div>
       <div className="mt-4 grid gap-4">
-        {props.group.items.map((product, index) => (
+        {props.group.items.slice(0, 5).map((product, index) => (
           <CompareOfferCard key={`${props.group.id}-${product.id}-${index}`} product={product} index={index} {...props} />
         ))}
       </div>
+      {props.group.items.length > 5 ? <p className="mt-3 text-xs text-slate-400">Показаны 5 лучших предложений из {props.group.items.length}.</p> : null}
     </div>
   );
 }

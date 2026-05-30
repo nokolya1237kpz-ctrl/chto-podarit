@@ -3,7 +3,7 @@ import { verifyAdminSession } from '@/lib/adminAuth';
 import { getActiveProducts, supabaseAdmin } from '@/lib/supabase';
 import { getProductCategory } from '@entities/product/lib/categoryMapper';
 import { detectProductGender } from '@entities/product/lib/detectProductGender';
-import { scoreProductForGift, type GiftQuizAnswers } from '@features/gift-quiz/lib/recommendationEngine';
+import { recommendationEngineVersion, scoreProductForGift, type GiftQuizAnswers } from '@features/gift-quiz/lib/recommendationEngine';
 
 export async function POST(request: NextRequest) {
   const isAdmin = await verifyAdminSession();
@@ -46,7 +46,18 @@ export async function POST(request: NextRequest) {
       .filter((item) => item.blocked)
       .slice(0, 30);
 
-    return NextResponse.json({ success: true, answers, topResults, blockedExamples, total: products.length });
+    return NextResponse.json({
+      success: true,
+      route: '/api/admin/recommendation-debug',
+      source: 'local_catalog',
+      recommendationEngineVersion,
+      answers,
+      total: products.length,
+      allowedCount: scored.filter((item) => !item.blocked && item.score >= 50).length,
+      blockedCount: scored.filter((item) => item.blocked).length,
+      topResults,
+      blockedExamples,
+    });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка диагностики' }, { status: 500 });
   }

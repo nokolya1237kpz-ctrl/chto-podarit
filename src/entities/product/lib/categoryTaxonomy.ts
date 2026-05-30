@@ -54,7 +54,7 @@ export type TaxonomyCategory = {
 
 export const CATEGORY_TAXONOMY: TaxonomyCategory[] = [
   { slug: 'car_fragrance', label: 'Автомобильные ароматизаторы', group: 'auto', patterns: [/ароматизатор.*авто/i, /авто.*ароматизатор/i, /автопарфюм/i, /освежител[ья].*авто/i, /вонючк.*авто/i] },
-  { slug: 'auto_accessories', label: 'Автоаксессуары', group: 'auto', patterns: [/fm[-\s]?модулятор/i, /трансмиттер.*авто/i, /держател[ьи].*авто/i, /зарядк.*авто/i, /автоаксесс/i, /прикуривател/i, /коврик.*авто/i] },
+  { slug: 'auto_accessories', label: 'Автоаксессуары', group: 'auto', patterns: [/fm[-\s]?модулятор/i, /трансмиттер.*авто/i, /пусков.*зарядн/i, /держател[ьи].*авто/i, /зарядк.*авто/i, /автоаксесс/i, /прикуривател/i, /коврик.*авто/i] },
   { slug: 'auto_parts', label: 'Автозапчасти', group: 'auto', patterns: [/автозапчаст/i, /запчаст/i, /oem/i, /тормозн/i, /фильтр.*масл/i, /свеч[аи].*зажиган/i] },
   { slug: 'auto', label: 'Автотовары', group: 'auto', patterns: [/автотовар/i, /автомоб/i, /машин/i, /авто/i, /car/i] },
   { slug: 'cosmetics', label: 'Косметика', group: 'beauty', patterns: [/помад/i, /тушь/i, /макияж/i, /космет/i, /тональ/i, /лак для ног/i] },
@@ -67,8 +67,9 @@ export const CATEGORY_TAXONOMY: TaxonomyCategory[] = [
   { slug: 'accessories_female', label: 'Женские аксессуары', group: 'fashion', patterns: [/аксессуар.*жен/i, /женск.*аксессуар/i, /заколк/i, /косметичк/i, /шарф.*жен/i] },
   { slug: 'accessories_male', label: 'Мужские аксессуары', group: 'fashion', patterns: [/аксессуар.*муж/i, /мужск.*аксессуар/i, /портмоне/i, /зажим.*денег/i] },
   { slug: 'male_accessories', label: 'Мужские аксессуары', group: 'fashion', patterns: [/мужск.*кошелек/i, /кошелек.*муж/i, /мужск.*портмоне/i] },
+  { slug: 'accessories', label: 'Аксессуары', group: 'fashion', patterns: [/рюкзак/i, /зонт/i, /кошелек/i, /визитниц/i, /брелок/i, /аксессуар/i] },
   { slug: 'women_fashion', label: 'Женская одежда', group: 'fashion', patterns: [/женск/i, /плать/i, /юбк/i, /блуз/i, /лиф/i, /бель[её]/i] },
-  { slug: 'men_fashion', label: 'Мужская одежда', group: 'fashion', patterns: [/мужск/i, /галстук/i, /бритв/i, /бород/i] },
+  { slug: 'men_fashion', label: 'Мужская одежда', group: 'fashion', patterns: [/мужск/i, /галстук/i, /бритв/i, /бород/i, /балаклав/i] },
   { slug: 'fashion', label: 'Одежда', group: 'fashion', patterns: [/одежд/i, /футболк/i, /брюк/i, /обув/i, /куртк/i, /размер/i] },
   { slug: 'gaming', label: 'Игры и гейминг', group: 'electronics', patterns: [/игров/i, /gaming/i, /гейм/i, /playstation/i, /xbox/i, /джойст/i] },
   { slug: 'gadgets', label: 'Гаджеты', group: 'electronics', patterns: [/iphone/i, /айфон/i, /смартфон/i, /планшет/i, /умн.*час/i, /powerbank/i] },
@@ -141,21 +142,25 @@ function normalizeText(value: string) {
 export function detectCategorySlug(product: Partial<Product> & { category?: string | null }): CategorySlug {
   const rawCategory = normalizeText(String(product.category || ''));
   const tags = Array.isArray(product.tags) ? product.tags.join(' ') : '';
-  const text = normalizeText([
+  const primaryText = normalizeText([
     rawCategory,
-    tags,
     product.title,
-    product.description,
-    product.marketplace,
-    product.sourceProvider,
-    product.originalUrl,
-    product.affiliateUrl,
   ].filter(Boolean).join(' '));
 
-  const direct = DIRECT_LABELS[rawCategory] || DIRECT_LABELS[normalizeText(tags)];
+  const direct = DIRECT_LABELS[rawCategory];
   if (direct) return direct;
-  const matched = CATEGORY_TAXONOMY.find((category) => category.patterns.some((pattern) => pattern.test(text)));
-  return matched?.slug || 'unknown';
+  const primaryMatched = CATEGORY_TAXONOMY.find((category) => category.patterns.some((pattern) => pattern.test(primaryText)));
+  if (primaryMatched) return primaryMatched.slug;
+
+  const tagsText = normalizeText(tags);
+  const directTags = DIRECT_LABELS[tagsText];
+  if (directTags) return directTags;
+  const tagsMatched = CATEGORY_TAXONOMY.find((category) => category.patterns.some((pattern) => pattern.test(tagsText)));
+  if (tagsMatched) return tagsMatched.slug;
+
+  const fallbackText = normalizeText([product.description, product.marketplace, product.sourceProvider, product.originalUrl, product.affiliateUrl].filter(Boolean).join(' '));
+  const fallbackMatched = CATEGORY_TAXONOMY.find((category) => category.patterns.some((pattern) => pattern.test(fallbackText)));
+  return fallbackMatched?.slug || 'unknown';
 }
 
 export function getCategoryMeta(slug: string) {

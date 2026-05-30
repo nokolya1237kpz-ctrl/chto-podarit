@@ -10,7 +10,8 @@ export type ProductCategory = {
 };
 
 export function getProductCategory(product: Partial<Product> & { category?: string | null }) {
-  return getCategoryMeta(product.categorySlug || detectCategorySlug(product));
+  const detected = detectCategorySlug(product);
+  return getCategoryMeta(detected === 'unknown' ? product.categorySlug || detected : detected);
 }
 
 export function enrichProductCategory<T extends Partial<Product>>(product: T): T & {

@@ -4,6 +4,8 @@ export function cleanupTitle(title?: string) {
   return (title || '')
     .normalize('NFKD')
     .replace(/\s+/g, ' ')
+    .replace(/(?:^|\s)код\s*\d+(?=\s|$)/gi, ' ')
+    .replace(/(?:^|\s)арт(?:икул)?\.?\s*\d+(?=\s|$)/gi, ' ')
     .replace(/[^\p{L}\p{N}\s.+-]/gu, ' ')
     .replace(/\b(ozon|wildberries|wb|aliexpress|яндекс\s*маркет|dns|citilink|мвидео|м\.видео|эльдорадо|megamarket)\b/gi, ' ')
     .replace(/\s*[|/\\-]\s*(купить|цена|доставка|официальный магазин).*$/i, '')

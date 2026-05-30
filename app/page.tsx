@@ -174,6 +174,21 @@ export default async function Home() {
             </div>
           </section>
 
+          <section className="grid gap-4 lg:grid-cols-3">
+            {[
+              ['Подарки по получателю', [['Девушке', '/gifts/for-girlfriend'], ['Парню', '/gifts/for-boyfriend'], ['Маме', '/gifts/for-mom'], ['Папе', '/gifts/for-dad'], ['Коллеге', '/gifts/for-colleague'], ['Ребёнку', '/gifts/for-child']]],
+              ['Подарки по бюджету', [['До 1000 ₽', '/gifts/by-budget/do-1000'], ['До 3000 ₽', '/gifts/by-budget/do-3000'], ['До 5000 ₽', '/gifts/by-budget/do-5000'], ['До 10 000 ₽', '/gifts/by-budget/do-10000']]],
+              ['Сравнение популярных товаров', [['iPhone 15', '/compare/iphone-15'], ['AirPods', '/compare/airpods'], ['Наушники JBL', '/compare/naushniki-jbl'], ['Dyson', '/compare/dyson']]],
+            ].map(([title, links]) => (
+              <div key={String(title)} className="rounded-3xl border border-white/10 bg-slate-950/80 p-5">
+                <h2 className="text-lg font-bold text-white">{String(title)}</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(links as string[][]).map(([label, href]) => <a key={href} href={href} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:border-purple-300/40 hover:bg-white/10">{label}</a>)}
+                </div>
+              </div>
+            ))}
+          </section>
+
           <ProductRail title="Тренды TikTok и WB" subtitle="Вирусные хиты и небанальные идеи из каталога" products={trendingProducts.length ? trendingProducts : randomProducts} />
           <ProductRail title="Самые выгодные сегодня" subtitle="Самые доступные товары сначала" products={cheapestDeals} />
           <ProductRail title="Новинки" subtitle="Свежие опубликованные товары, готовые к просмотрам" products={newArrivals.length ? newArrivals : randomProducts} />
