@@ -10,6 +10,7 @@ export const ANALYTICS_EVENTS = {
   productView: 'product_view',
   categoryView: 'category_view',
   compareResultClick: 'compare_result_click',
+  marketplaceSearchClick: 'marketplace_search_click',
 } as const;
 
 export type AnalyticsEventName = typeof ANALYTICS_EVENTS[keyof typeof ANALYTICS_EVENTS] | string;

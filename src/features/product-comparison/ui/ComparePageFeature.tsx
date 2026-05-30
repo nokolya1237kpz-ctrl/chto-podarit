@@ -15,6 +15,7 @@ import { CompareLoadingState } from './CompareLoadingState';
 import { CompareResults } from './CompareResults';
 import { CompareSearchForm } from './CompareSearchForm';
 import { useTrackEvent } from '@/src/hooks/useTrackEvent';
+import { MarketplaceSearchLinks } from '@entities/marketplace/ui/MarketplaceSearchLinks';
 
 export default function ComparePageFeature() {
   return (
@@ -187,6 +188,7 @@ function CompareContent() {
           onToggleStored={toggleStored}
           getPriceNote={priceNote}
         />
+        {submittedQuery ? <MarketplaceSearchLinks query={submittedQuery} /> : null}
       </main>
       <Footer />
     </div>

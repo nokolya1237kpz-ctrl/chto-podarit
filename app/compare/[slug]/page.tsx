@@ -36,6 +36,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
       description={`Собрали доступные предложения по запросу «${query}» из опубликованного каталога. Сравните цены, изучите карточки товаров и перейдите к продавцу. Если нужного предложения пока нет, воспользуйтесь поиском сравнения цен: каталог постепенно расширяется после импорта новых источников.`}
       canonical={`/compare/${slug}`}
       products={products}
+      marketplaceSearchQuery={query}
     />
   );
 }

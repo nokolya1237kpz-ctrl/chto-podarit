@@ -2,6 +2,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GiftCard from '@/components/GiftCard';
 import type { Product } from '@/types/product';
+import { MarketplaceSearchLinks } from '@entities/marketplace/ui/MarketplaceSearchLinks';
 
 type GiftSeoPageProps = {
   title: string;
@@ -9,6 +10,7 @@ type GiftSeoPageProps = {
   products: Product[];
   canonical?: string;
   faq?: Array<{ question: string; answer: string }>;
+  marketplaceSearchQuery?: string;
 };
 
 const defaultFaq = [
@@ -17,7 +19,7 @@ const defaultFaq = [
   { question: 'Как быстро обновляется подборка?', answer: 'Каталог обновляется после импорта товаров и публикации новых предложений в административной панели.' },
 ];
 
-export default function GiftSeoPage({ title, description, products, canonical = '/', faq = defaultFaq }: GiftSeoPageProps) {
+export default function GiftSeoPage({ title, description, products, canonical = '/', faq = defaultFaq, marketplaceSearchQuery }: GiftSeoPageProps) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://xn----8sba3adk3a1a.xn--p1ai';
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -59,6 +61,14 @@ export default function GiftSeoPage({ title, description, products, canonical = 
         <section className="mt-8 grid gap-6 lg:grid-cols-3">
           {products.map((product) => <GiftCard key={product.id} gift={product} />)}
         </section>
+        {marketplaceSearchQuery ? (
+          <MarketplaceSearchLinks
+            query={marketplaceSearchQuery}
+            heading="Где искать товар"
+            description="Откройте поиск на популярных маркетплейсах и проверьте дополнительные предложения вручную."
+            sourcePage={canonical}
+          />
+        ) : null}
         <section className="mt-10 rounded-[2rem] border border-white/10 bg-slate-900/70 p-6">
           <h2 className="text-2xl font-bold">Частые вопросы</h2>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
